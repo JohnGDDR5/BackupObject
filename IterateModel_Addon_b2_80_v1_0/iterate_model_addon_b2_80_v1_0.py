@@ -187,11 +187,13 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                 #Iterates through all selected objects
                 for i in enumerate(bpy.context.selected_objects):
                     existingCol = None
+                    #existinOb = None
                     existingColName = ""
                     for j in enumerate(props.collections):
                         #If object is already registered in props.collections:object
                         if i[1] == j[1].object:
                             existingCol = j[0]
+                            #existinOb = i[0]
                             
                             #Duplicates object
                             ob_copy = i[1].data.copy()
@@ -217,7 +219,7 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                         #Adds scene.IM_Props collection
                         propsCol = props.collections.add()
                         propsCol.collection = colNew2
-                        propsCol.object = ob
+                        propsCol.object = i[1]#bpy.context.selected_objects[existinOb]
         
         self.type == "DEFAULT"
         
