@@ -334,6 +334,9 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         col = layout.column()
         
         row = col.row(align=True)
+        row.label(text="Parent Collection:")
+        
+        row = col.row(align=True)
         if props.collection_parent is None:
             #If a collection exists
             if len(bpy.data.collections) > 0:
@@ -347,6 +350,9 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
             #row = col.row(align=True)
             row.prop(scene.IM_Props.collection_parent, "name", icon="GROUP", text="")
             row.operator("iteratemodel.collection_ops", icon="ADD", text="").type = "NEW_COLLECTION"
+            
+            row = col.row(align=True)
+            row.label(text="Active Collection:")
             
             row = col.row(align=True)
             row.prop(scene.IM_Props.collection_active, "name", icon="GROUP", text="")
