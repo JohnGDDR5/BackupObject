@@ -23,3 +23,11 @@ ob = bpy.data.objects.new(str(object.name), object_copy)
 #Links the duplicated object in the scene
 scene.objects.link(ob)
 #Copied from ResSwitch BOTTOM
+
+bpy.context.object.users_collection
+#Returns: (bpy.data.collections['Bruh'], bpy.data.collections['Cube.002'], bpy.data.collections['Cube.003'])
+
+bpy.context.selected_objects[0].users_collection
+#Returns: (bpy.data.collections['Bruh'], bpy.data.collections['Cube.002'], bpy.data.collections['Cube.003'])
+
+bpy.context.selected_objects[0].users_collection[0].objects.unlink()

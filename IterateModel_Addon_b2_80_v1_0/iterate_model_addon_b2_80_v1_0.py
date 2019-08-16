@@ -178,31 +178,58 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
             if props.collection_parent is not None:
                 #If there is no collection in collection_active
                 if props.collection_active is None:
-                    colNew = bpy.data.collections.new("Collection")
-                    #Links colNew to collection_parent
-                    props.collection_parent.children.link(colNew)
+                    colNew = bpy.data.collections.new(props.group_name)
                     #Sets collection_active as colNew
                     props.collection_active = colNew
+                    #Links colNew to collection_parent
+                    props.collection_parent.children.link(colNew)
+                
+                previous_active = bpy.context.active_object
+                
+                previous_selected = bpy.context.selected_objects
+                
+                bpy.ops.object.duplicate_move(OBJECT_OT_duplicate={"linked":False, "mode":'TRANSLATION'}, TRANSFORM_OT_translate={"value":(0.0, 0.0, 0.0), "orient_type":'GLOBAL'})
+
+                
+                #bpy.ops.object.mode_set(mode="OBJECT")
+                
+                """
+                ob = bpy.context.object
+                if not ob.select_get():
+                    ob.select_set(True) """
                 
                 #Iterates through all selected objects
-                for i in enumerate(bpy.context.selected_objects):
+                for i in enumerate(previous_selected):
                     existingCol = None
-                    #existinOb = None
                     existingColName = ""
+                    
+                    ob = bpy.context.selected_objects[i[0]]
+                    #Unselects object
+                    ob.select_set(False)
+                    
                     for j in enumerate(props.collections):
                         #If object is already registered in props.collections:object
                         if i[1] == j[1].object:
                             existingCol = j[0]
-                            #existinOb = i[0]
                             
+                            """
                             #Duplicates object
                             ob_copy = i[1].data.copy()
                             ob = bpy.data.objects.new(i[1].name, ob_copy)
                             #Links the duplicated object in the scene
-                            j[1].collection.objects.link(ob)
+                            j[1].collection.objects.link(ob) """
                             #scene.collection.objects.link(ob)
                             
+                            #Unlinks duplicate from all collections it is linked to
+                            for k in enumerate(ob.users_collection):
+                                k[1].objects.unlink(ob)
+                            
+                            #Links duplicated object to existing collection
+                            j[1].collection.objects.link(ob)
+                            print("For: 1")
                             break
+                    
+                    print("existingCol: %s" % (str(existingCol)))
                     
                     if existingCol == None:
                         colNew2 = bpy.data.collections.new(i[1].name)
@@ -210,17 +237,111 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                         props.collection_active.children.link(colNew2)
                         #Sets collection_active as colNew2
                         
+                        """
                         #Duplicates object
                         ob_copy = i[1].data.copy()
-                        ob = bpy.data.objects.new(i[1].name, ob_copy)
+                        ob = bpy.data.objects.new(i[1].name, ob_copy) 
                         #Links the duplicated object in the scene
+                        colNew2.objects.link(ob) """
+                        
+                        #Unlinks duplicate from all collections it is linked to
+                        for k in enumerate(ob.users_collection):
+                            k[1].objects.unlink(ob)
+                        
+                        #Links duplicate to colNew2 collection
                         colNew2.objects.link(ob)
                         
                         #Adds scene.IM_Props collection
                         propsCol = props.collections.add()
                         propsCol.collection = colNew2
-                        propsCol.object = i[1]#bpy.context.selected_objects[existinOb]
+                        propsCol.object = i[1]#i[1]#bpy.context.selected_objects[existinOb]
+                        
+                        #Hides Collection
+                        propsCol.collection.hide_viewport = True
+                        
+                        print("If: None")
+                        
+                    #Unselects duplicated object
+                    ob.select_set(False)
+                    
+                    #bpy.context.active_object = previous_active
+                    previous_active.select_set(True)
+                    
+                    bpy.context.view_layer.objects.active = previous_active
+                        
+        self.type == "DEFAULT"
         
+        return {'FINISHED'}
+        
+class ITERATE_MODEL_OT_Debugging(bpy.types.Operator):
+    bl_idname = "iteratemodel.clear_collections"
+    bl_label = "IterateModel Duplicating Operators"
+    bl_description = "IterateModel Duplicating Operators"
+    bl_options = {'UNDO',}
+    type: bpy.props.StringProperty(default="DEFAULT")
+    #index: bpy.props.IntProperty(default=0, min=0)
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+        #inputs = context.preferences.inputs
+        #bpy.context.preferences.inputs.view_rotate_method
+        
+        #collection_parent:
+        #collection_active: 
+        #collections:
+            #collection:
+            #object:
+            #duplicates:
+            #recent:
+                        
+        if self.type == "DELETE":
+            
+            if props.collection_parent is not None:
+                if props.collection_active is not None:
+                    removedObjects = 0
+                    removedCol = 0
+                    for i in enumerate(reversed(props.collections)):
+                        if i[1].collection is not None:
+                            for j in i[1].collection.objects:
+                                removedObjects += 1
+                                i[1].collection.objects.unlink(j)
+                            removedCol += 1
+                            #Removes collection, but not other links of it incase the user linked it
+                            bpy.data.collections.remove(i[1].collection, do_unlink=True)
+                            
+                        props.collections.remove(len(props.collections)-1)
+                    colNames = [props.collection_parent.name, props.collection_active.name]
+                    
+                    reportString = "Removed: [%s, %s] & %d Objects & %d Collection Groups" % (colNames[0], colNames[1], removedObjects, removedCol)
+                    
+                    bpy.data.collections.remove(props.collection_active, do_unlink=True)
+                    bpy.data.collections.remove(props.collection_parent, do_unlink=True)
+                    
+                    print(reportString)
+                    self.report({'INFO'}, reportString)
+                else:
+                    #Removes scene.IM_Props.collections
+                    for i in enumerate(reversed(props.collections)):
+                        props.collections.remove(len(props.collections)-1)
+                    
+                    reportString = "Removed: [%s] Collection" % (props.collection_parent.name)
+                    
+                    #Removes collection, but not other links of it incase the user linked it
+                    bpy.data.collections.remove(props.collection_parent, do_unlink=True)
+                    
+                    print(reportString)
+                    self.report({'INFO'}, reportString)
+            else:
+                #Removes scene.IM_Props.collections
+                for i in enumerate(reversed(props.collections)):
+                    props.collections.remove(len(props.collections)-1)
+                    
+                reportString = "collection_parent is None"
+                
+                print(reportString)
+                self.report({'INFO'}, reportString)
+                
         self.type == "DEFAULT"
         
         return {'FINISHED'}
@@ -295,14 +416,14 @@ class ITERATE_MODEL_MT_CollectionsMenu(bpy.types.Menu):
         
         if len(bpy.data.collections) > 0:
             for i in enumerate(bpy.data.collections):
-                button = row.operator("iteratemodel.group_ops", text=i[1].name)
+                button = row.operator("iteratemodel.collection_ops", text=i[1].name)
                 button.type = "SELECT_COLLECTION"
                 button.index = i[0]
                 
                 row = col.row(align=True)
         else:
             #NEW_COLLECTION
-            button = row.operator("iteratemodel.group_ops", text=i[1].name)
+            button = row.operator("iteratemodel.collection_ops", text=i[1].name)
             button.type = "NEW_COLLECTION"
             #bpy.data.collections.new("Boi") 
         #row.prop(self, "ui_tab", expand=True)#, text="X")
@@ -368,6 +489,12 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         row = col.row(align=True)
         row.template_list("ITERATE_MODEL_UL_items", "custom_def_list", scene.IM_Props, "collections", scene.IM_Props, "IM_ULIndex", rows=3)
         
+        row = col.row(align=True)
+        row.label(text="Debug Ops:")
+        
+        row = col.row(align=True)
+        row.operator("iteratemodel.clear_collections", text="Delete All").type = "DELETE"
+        
         #End of CustomPanel
 
 """
@@ -407,6 +534,7 @@ classes = (
     ITERATE_MODEL_OT_SelectCollection,
     ITERATE_MODEL_OT_UIOperators,
     ITERATE_MODEL_OT_Duplicate,
+    ITERATE_MODEL_OT_Debugging,
     
     ITERATE_MODEL_UL_items,
     ITERATE_MODEL_MT_CollectionsMenu,
