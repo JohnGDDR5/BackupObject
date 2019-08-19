@@ -219,6 +219,10 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                             propsCol.object = i[1]#i[1]#bpy.context.selected_objects[existinOb]
                             propsCol.duplicates += 1
                             propsCol.name = colNew2.name
+                            #Adds the index of the order of created
+                            propsCol.recent += len(props.collections)
+                            #Custom Index will be in order if it is a new props.collection
+                            propsCol.custom += len(props.collections)
                             
                             #Hides Collection
                             propsCol.collection.hide_viewport = True
@@ -241,11 +245,43 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                     
                     #print(reportString)
                     self.report({'INFO'}, reportString)
-                    
-                #This is where sorting is done
                 
-                sort = sorted(props.collections, key=lambda a: a.duplicates, reverse=False)
-                print("Sorted: "+str(sort))
+                #list_order "DUPLICATES" "RECENT" "CUSTOM"
+                #list_reverse: "DESCENDING" "ASCENDING"
+                """
+                def bruh(item, n):
+                    a = None
+                    if n == "duplicates":
+                        a = n.duplicates
+                    return a """
+                """
+                def bruh(item):
+                    a = None
+                    print("Bruh: "+str(props.list_order))
+                    if props.list_order == "DUPLICATES":
+                        #a = item.duplicates
+                        return int(item.duplicates)#a """
+                reverseBool = False
+                if props.list_reverse == "DESCENDING":
+                    reverseBool = False
+                elif props.list_reverse == "ASCENDING":
+                    reverseBool = True
+                    
+                def bruh(a):
+                    #value = None
+                    #print("Bruh: "+str(props.list_order))
+                    if props.list_order == "DUPLICATES":
+                        return a.duplicates
+                    if props.list_order == "RECENT":
+                        return a.recent
+                    if props.list_order == "CUSTOM":
+                        return a.custom
+                    
+                
+                sort = None
+                #This is where sorting is done
+                #sort = sorted(props.collections, key=lambda a: a.duplicates, reverse=reverseBool)
+                sort = sorted(props.collections, key=bruh, reverse=reverseBool)
                 
                 nameList = []
                 
@@ -254,22 +290,42 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                     if i[1].object is not None:
                         nameList.append(i[1].object.name)
                     else:
-                        colLocation = 0
-                        for j in enumerate(props.collections):
-                            if j[1] == i[1]:
-                                colLocation = j[0]
-                                break
-                        #Removes a props.collections if it has no .object
-                        props.collections.remove(colLocation)
+                        print("Collection: %s missing object" % (i[1].name))
                 
                 #For loop uses object names in nameList to move props.collections
                 for i in enumerate(nameList):
                     colLocation = 0
+                    #Loops through props.collections to see if their names matches the names of object names in nameList
                     for j in enumerate(props.collections):
                         if j[1].name == i[1]:
                             colLocation = j[0]
                             break
-                    props.collections.move(colLocation, i[0]) 
+                    props.collections.move(colLocation, i[0])
+                """
+                elif props.list_order == "RECENT":
+                    
+                    sort = sorted(props.collections, key=lambda a: a.recent, reverse=props.list_reverse)
+                    print("Sorted: "+str(sort))
+                    
+                    nameList = []
+                    
+                    #For loop appends the names of objects in props.collections.objects into nameList
+                    for i in enumerate(sort):
+                        if i[1].object is not None:
+                            nameList.append(i[1].object.name)
+                        else:
+                            print("Collection: %s missing object" % (i[1].name))
+                    
+                    #For loop uses object names in nameList to move props.collections
+                    for i in enumerate(nameList):
+                        colLocation = 0
+                        #Loops through props.collections to see if their names matches the names of object names in nameList
+                        for j in enumerate(props.collections):
+                            if j[1].name == i[1]:
+                                colLocation = j[0]
+                                break
+                        props.collections.move(colLocation, i[0]) """
+                    
         self.type == "DEFAULT"
         
         return {'FINISHED'}
@@ -467,6 +523,15 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         row.template_list("ITERATE_MODEL_UL_items", "custom_def_list", scene.IM_Props, "collections", scene.IM_Props, "IM_ULIndex", rows=3)
         
         row = col.row(align=True)
+        row.prop(scene.IM_Props, "list_order", icon="NONE", expand=True)
+        
+        row = col.row(align=True)
+        row.prop_enum(scene.IM_Props, "list_order", "DUPLICATES", text="", text_ctxt="", translate=True, icon='NONE')
+        
+        row = col.row(align=True)
+        row.prop(scene.IM_Props, "list_reverse", expand=True)
+        
+        row = col.row(align=True)
         row.label(text="Debug Ops:")
         
         row = col.row(align=True)
@@ -497,7 +562,7 @@ class ITERATE_MODEL_CollectionObjects(bpy.types.PropertyGroup):
     object: bpy.props.PointerProperty(name="Object", type=bpy.types.Object)
     duplicates: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     recent: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
-    #custom: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
+    custom: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     
 class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     collection_parent: bpy.props.PointerProperty(name="Collection to add Groups to", type=bpy.types.Collection)
@@ -505,7 +570,16 @@ class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     collections: bpy.props.CollectionProperty(type=ITERATE_MODEL_CollectionObjects)
     IM_ULIndex: bpy.props.IntProperty(name="Int", description="UI List Index", default= 0, min=0)
     group_name: bpy.props.StringProperty(default="Group")
-
+    
+    listDesc =  ["List: Allows User most control of how many ResButtons display in the Tab", "Extended: Displays all of the ResButtons in the Tab", "Dropdown: Displays only one ResButton at a time, and adds a dropdown menu to select other ResButtons. The most condensed Display Mode"]
+    listDesc2 =  ["List displays in Descending Order", "List displays in Ascending Order"]
+    
+    list_order: bpy.props.EnumProperty(name="Display Mode", items= [("DUPLICATES", "Duplicates", listDesc[0], "DUPLICATE", 0), ("RECENT", "Recent", listDesc[1], "SORTTIME", 1), ("CUSTOM", "Custom", listDesc[2], "ARROW_LEFTRIGHT", 2)], description="Display Mode of List", default="DUPLICATES")
+    list_reverse: bpy.props.EnumProperty(name="Display Mode", items= [("DESCENDING", "Descending", listDesc2[0], "SORT_DESC", 0), ("ASCENDING", "Ascending", listDesc2[1], "SORT_ASC", 1)], description="Display Mode of List", default="DESCENDING")
+    
+    #list_order: "DUPLICATES" "RECENT" "CUSTOM"
+    #list_reverse: "DESCENDING" "ASCENDING"
+    
 #Classes that are registered
 classes = (
     ITERATE_MODEL_OT_SelectCollection,
