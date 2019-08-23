@@ -54,3 +54,6 @@ bpy.context.selected_objects[0].users_collection[0].objects.unlink()
 ob = bpy.context.object
 if not ob.select_get():
     ob.select_set(True) """
+    
+bpy.context.preferences.addons[0]
+#returns the activated Addons the User has
