@@ -45,7 +45,7 @@ class ITERATE_MODEL_OT_SelectCollection(bpy.types.Operator):
     bl_description = "IterateModel Duplicating Operators"
     bl_options = {'UNDO',}
     type: bpy.props.StringProperty(default="DEFAULT")
-    index: bpy.props.IntProperty(default=0, min=0)
+    index: bpy.props.IntProperty(default=0, min=-1)
     
     """
     @classmethod
@@ -58,12 +58,18 @@ class ITERATE_MODEL_OT_SelectCollection(bpy.types.Operator):
             
         #Select a collection 
         if self.type == "SELECT_COLLECTION":
-            props.collection_parent = bpy.data.collections[self.index]
+            if self.index >= 0:
+                props.collection_parent = bpy.data.collections[self.index]
+            else:
+                props.collection_parent = bpy.context.scene.collection
             
-            colNew = bpy.data.collections.new(props.group_name)
-            #Links colNew to collection_active
-            props.collection_active = colNew
-            props.collection_parent.children.link(colNew)
+            if props.collection_active is None:
+                colNew = bpy.data.collections.new(props.group_name)
+                #Links colNew to collection_active
+                props.collection_active = colNew
+                props.collection_parent.children.link(colNew)
+            else:
+                pass
         
         #NOTE THIS HING BRUHHHHHHH
         
@@ -133,7 +139,8 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
         scene = bpy.context.scene
         props = scene.IM_Props
         
-        return props.collection_parent is not None and props.collection_active is not None
+        #return props.collection_parent is not None and props.collection_active is not None
+        return props.collection_active is not None
     
     def execute(self, context):
         scene = bpy.context.scene
@@ -148,111 +155,137 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
             #object:
             #duplicates:
             #recent:
-                        
+        
+        #If somehow, you have a collection in props.collection_active, but not one in props.collection_parent
+        """if props.collection_parent is None:
+            # Create a new collection and link it to the scene.
+            colNew = bpy.data.collections.new("Collection")
+            props.collection_parent = colNew
+            scene.collection.children.link(colNew)
+            
+            #Creates new Group Collection
+            colNew2 = bpy.data.collections.new(props.group_name)
+            #Links colNew2 to collection_parent
+            props.collection_active = colNew2
+            props.collection_parent.children.link(colNew2) """
+        
         if self.type == "DUPLICATE":
             
-            if props.collection_parent is not None:
-                #If there is no collection in collection_active
-                if props.collection_active is None:
-                    colNew = bpy.data.collections.new(props.group_name)
-                    #Sets collection_active as colNew
-                    props.collection_active = colNew
-                    #Links colNew to collection_parent
-                    props.collection_parent.children.link(colNew)
+            #if props.collection_parent is not None:
+                #Was here before
                 
-                if len(bpy.context.selected_objects) > 0:
+            #If there is no collection in collection_active
+            if props.collection_active is None:
+                colNew = bpy.data.collections.new(props.group_name)
+                #Sets collection_active as colNew
+                props.collection_active = colNew
+                
+                #If collection of collection_parent is deleted or None, set it to Master Collection
+                if props.collection_parent is None:
+                    #The only way to access Master Collection is by "bpy.context.scene.collection"
+                    props.collection_parent = bpy.context.scene.collection
+                #Links colNew to collection_parent
+                props.collection_parent.children.link(colNew)
+            
+            if len(bpy.context.selected_objects) > 0:
+                
+                previous_active = bpy.context.active_object
+                
+                previous_selected = bpy.context.selected_objects
+                
+                bpy.ops.object.duplicate_move(OBJECT_OT_duplicate={"linked":False, "mode":'TRANSLATION'}, TRANSFORM_OT_translate={"value":(0.0, 0.0, 0.0), "orient_type":'GLOBAL'})
+                
+                #Iterates through all selected objects
+                for i in enumerate(previous_selected):
+                    existingCol = None
+                    existingColName = ""
                     
-                    previous_active = bpy.context.active_object
+                    ob = bpy.context.selected_objects[i[0]]
                     
-                    previous_selected = bpy.context.selected_objects
+                    #Unlinks duplicate from all collections it is linked to
+                    for k in enumerate(ob.users_collection):
+                        k[1].objects.unlink(ob)
                     
-                    bpy.ops.object.duplicate_move(OBJECT_OT_duplicate={"linked":False, "mode":'TRANSLATION'}, TRANSFORM_OT_translate={"value":(0.0, 0.0, 0.0), "orient_type":'GLOBAL'})
-                    
-                    #Iterates through all selected objects
-                    for i in enumerate(previous_selected):
-                        existingCol = None
-                        existingColName = ""
-                        
-                        ob = bpy.context.selected_objects[i[0]]
-                        
-                        #Unlinks duplicate from all collections it is linked to
-                        for k in enumerate(ob.users_collection):
-                            k[1].objects.unlink(ob)
-                        
-                        #Iterates through all IM_Props.collections
-                        for j in enumerate(props.collections):
-                            #If object is already registered in props.collections:object
-                            if i[1] == j[1].object:
-                                existingCol = j[0]
+                    #Iterates through all IM_Props.collections
+                    for j in enumerate(props.collections):
+                        #If object is already registered in props.collections:object
+                        if i[1] == j[1].object:
+                            existingCol = j[0]
+                            
+                            #If IM_Props.collections.collection is None (Ex. when a New Group collection is made)
+                            if j[1].collection is None:
+                                colNew = bpy.data.collections.new(i[1].name)
+                                #Sets IM_Props.collections' collection
+                                j[1].collection = colNew
+                                #Hides new collection
+                                colNew.hide_viewport = True
                                 
-                                #If IM_Props.collections.collection is None (Ex. when a New Group collection is made)
-                                if j[1].collection is None:
-                                    colNew = bpy.data.collections.new(i[1].name)
-                                    #Sets IM_Props.collections' collection
-                                    j[1].collection = colNew
-                                    #Hides new collection
-                                    colNew.hide_viewport = True
-                                    
-                                    props.collection_active.children.link(colNew)
-                                    
-                                #Links duplicated object to existing collection
-                                j[1].collection.objects.link(ob)
-                                j[1].duplicates += 1
-                                j[1].name = j[1].collection.name
+                                props.collection_active.children.link(colNew)
                                 
-                                print("For: 1")
-                                break
-                        
-                        print("existingCol: %s" % (str(existingCol)))
-                        
-                        #If object wasn't found inside props.collections.object
-                        if existingCol == None:
-                            colNew2 = bpy.data.collections.new(i[1].name)
-                            #Links colNew2 to collection_parent
-                            props.collection_active.children.link(colNew2)
+                            #Links duplicated object to existing collection
+                            j[1].collection.objects.link(ob)
+                            j[1].duplicates += 1
+                            j[1].name = j[1].collection.name
                             
-                            #Links duplicate to colNew2 collection
-                            colNew2.objects.link(ob)
-                            
-                            #Adds scene.IM_Props collection
-                            propsCol = props.collections.add()
-                            propsCol.collection = colNew2
-                            propsCol.object = i[1]#i[1]#bpy.context.selected_objects[existinOb]
-                            propsCol.duplicates += 1
-                            #Makes the name of 
-                            propsCol.name = colNew2.name
-                            #Adds the index of the order of created
-                            propsCol.recent += len(props.collections)
-                            #Custom Index will be in order if it is a new props.collection
-                            propsCol.custom += len(props.collections)
-                            
-                            #Hides Collection
-                            propsCol.collection.hide_viewport = True
-                            
-                            print("If: None")
-                            
-                        #Unselects duplicated object
-                        ob.select_set(False)
-                        #Selects previously selected object
-                        previous_selected[i[0]].select_set(True)
-                        
-                    #selects previously active object
-                    previous_active.select_set(True)
-                    #Sets previously active object as active
-                    bpy.context.view_layer.objects.active = previous_active
-                        
-                else:
-                    reportString = "No Objects Selected. 0 Objects Duplicated"
+                            print("For: 1")
+                            break
                     
-                    #print(reportString)
-                    self.report({'INFO'}, reportString)
-                
-                #Calls the update function ListOrderUpdate to change locations of props.collections
-                ListOrderUpdate(self, context)
-                
-                #list_order "DUPLICATES" "RECENT" "CUSTOM"
-                #list_reverse: "DESCENDING" "ASCENDING"
+                    print("existingCol: %s" % (str(existingCol)))
                     
+                    #If object wasn't found inside props.collections.object
+                    if existingCol == None:
+                        colNew2 = bpy.data.collections.new(i[1].name)
+                        #Links colNew2 to collection_parent
+                        props.collection_active.children.link(colNew2)
+                        
+                        #Links duplicate to colNew2 collection
+                        colNew2.objects.link(ob)
+                        
+                        #Adds scene.IM_Props collection
+                        propsCol = props.collections.add()
+                        propsCol.collection = colNew2
+                        propsCol.object = i[1]#i[1]#bpy.context.selected_objects[existinOb]
+                        propsCol.duplicates += 1
+                        #Makes the name of 
+                        propsCol.name = colNew2.name
+                        #Adds the index of the order of created
+                        propsCol.recent += len(props.collections)
+                        #Custom Index will be in order if it is a new props.collection
+                        propsCol.custom += len(props.collections)
+                        
+                        #Hides Collection
+                        propsCol.collection.hide_viewport = True
+                        
+                        print("If: None")
+                        
+                    #Unselects duplicated object
+                    ob.select_set(False)
+                    #Selects previously selected object
+                    previous_selected[i[0]].select_set(True)
+                    
+                #selects previously active object
+                previous_active.select_set(True)
+                #Sets previously active object as active
+                bpy.context.view_layer.objects.active = previous_active
+                    
+            else:
+                reportString = "No Objects Selected. 0 Objects Duplicated"
+                
+                #print(reportString)
+                self.report({'INFO'}, reportString)
+            
+            #Calls the update function ListOrderUpdate to change locations of props.collections
+            ListOrderUpdate(self, context)
+            
+            #list_order "DUPLICATES" "RECENT" "CUSTOM"
+            #list_reverse: "DESCENDING" "ASCENDING"
+            """        
+            else:
+                if props.collection_active is not None:
+                    
+                    def findActiveCol(active_col):
+                        return """
+                        
         self.type == "DEFAULT"
         
         return {'FINISHED'}
@@ -423,7 +456,9 @@ class ITERATE_MODEL_UL_items(bpy.types.UIList):
             row = layout.row(align=True)
             info = '%d. %s: %d' % (index, item.object.name, item.duplicates)
             if len(IMCollect) > 0:
-                row.label(text=info)
+                row.label(text=info)#, icon="OUTLINER_OB_MESH")
+                #"OUTLINER_OB_MESH" for mesh, "OUTLINER_OB_IMAGE" for empty
+                #row.icon(item.object)
             else:
                 row.label(text="No Iterations Here")
 
@@ -439,18 +474,29 @@ class ITERATE_MODEL_MT_CollectionsMenu(bpy.types.Menu):
     bl_label = "Select a Collection"
     bl_description = "Menu That Displays all Collections in Scene"
     
+    if bpy.context.scene.IM_Props.collection_parent is not None:
+        bl_label = bpy.context.scene.IM_Props.collection_parent.name
+    
     # here you specify how they are drawn
     def draw(self, context):
         layout = self.layout
         scene = context.scene
         data = bpy.data
         props = scene.IM_Props
+        masterCol = bpy.context.scene.collection
         
         #collection_parent:
         #collection_active: 
         #collections:
         
         col = layout.column()
+        
+        
+        row = col.row(align=True)
+        
+        button = row.operator("iteratemodel.collection_ops", text=masterCol.name)
+        button.type = "SELECT_COLLECTION"
+        button.index = -1
         
         row = col.row(align=True)
         
@@ -536,11 +582,19 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         row.label(text="Parent Collection:")
         
         row = col.row(align=True)
-        if props.collection_parent is None:
+        
+        Menu1Name = "Select Collection"
+        
+        if props.collection_parent is not None:
+            Menu1Name = props.collection_parent.name
+        
+        #if props.collection_parent is None:
+        if props.lock_parent == False:
+            row.prop(scene.IM_Props, "lock_parent", icon="UNLOCKED", text="")
             #If a collection exists
             if len(bpy.data.collections) > 0:
                 #row = col.row(align=True)
-                row.menu("ITERATE_MODEL_MT_CollectionsMenu", icon="GROUP", text="Select Collection")
+                row.menu("ITERATE_MODEL_MT_CollectionsMenu", icon="GROUP", text=Menu1Name)
                 row.operator("iteratemodel.collection_ops", icon="ADD", text="").type = "NEW_COLLECTION"
             else:
                 row.operator("iteratemodel.collection_ops", icon="ADD", text="Add Collection").type = "NEW_COLLECTION"
@@ -548,9 +602,17 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         else: 
             
             #row = col.row(align=True)
-            row.prop(scene.IM_Props.collection_parent, "name", icon="GROUP", text="")
-            row.operator("iteratemodel.collection_ops", icon="ADD", text="").type = "NEW_COLLECTION"
+            row.prop(scene.IM_Props, "lock_parent", icon="LOCKED", text="")
             
+            if props.collection_parent is not None:
+                row.prop(scene.IM_Props.collection_parent, "name", icon="GROUP", text="")
+            else:
+                row.menu("ITERATE_MODEL_MT_CollectionsMenu", icon="GROUP", text=Menu1Name)
+            row.operator("iteratemodel.collection_ops", icon="ADD", text="").type = "NEW_COLLECTION"
+        
+        row = col.row(align=True)        
+        row.prop(scene.IM_Props, "collection_parent", icon="GROUP", text="")
+        
         row = col.row(align=True)
         row.label(text="Active Collection:")
         
@@ -564,7 +626,7 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
             
         #Duplicate Button
         row = col.row(align=True)
-        row.operator("iteratemodel.duplicating_ops", text="Iterate").type = "DUPLICATE"
+        row.operator("iteratemodel.duplicating_ops", icon="DUPLICATE", text="Iterate").type = "DUPLICATE"
         
         row = col.row(align=True)
         row.label(text="Iterations:")
@@ -717,6 +779,20 @@ def ListOrderUpdate(self, context):
     
     return
 
+def printBruh(self, context):
+    
+    print("printBruh Update:")
+    print("Collection Parent Name: "+self.collection_parent.name)
+    
+    return
+    
+def pollBruh(self, object):
+    
+    print("printBruh Update:")
+    print("Collection Parent Name: "+str(object))
+    
+    return
+
 class ITERATE_MODEL_CollectionObjects(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="", default="")
     collection: bpy.props.PointerProperty(name="Added Collections to List", type=bpy.types.Collection)
@@ -726,8 +802,15 @@ class ITERATE_MODEL_CollectionObjects(bpy.types.PropertyGroup):
     custom: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     
 class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
-    collection_parent: bpy.props.PointerProperty(name="Collection to add Groups to", type=bpy.types.Collection)
+    collection_parent: bpy.props.PointerProperty(name="Collection to add Groups to", type=bpy.types.Collection, update=printBruh, poll=pollBruh)
+    #Tries to set collection_parent's default to Master Collection
+    
     collection_active: bpy.props.PointerProperty(name="Collection to add Collections for Object duplicates", type=bpy.types.Collection)
+    
+    #Booleans for locking collection of parent and active
+    lock_parent: bpy.props.BoolProperty(name="Lock Collection of Parent", description="", default=False)
+    lock_active: bpy.props.BoolProperty(name="Lock Collection of Parent", description="", default=False)
+    
     collections: bpy.props.CollectionProperty(type=ITERATE_MODEL_CollectionObjects)
     IM_ULIndex: bpy.props.IntProperty(name="Int", description="UI List Index", default= 0, min=0)
     group_name: bpy.props.StringProperty(default="Group")
