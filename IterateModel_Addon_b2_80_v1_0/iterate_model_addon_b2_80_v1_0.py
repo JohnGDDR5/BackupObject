@@ -70,6 +70,9 @@ class ITERATE_MODEL_OT_SelectCollection(bpy.types.Operator):
                 props.collection_parent.children.link(colNew)
             else:
                 pass
+                
+        if self.type == "SELECT_ACTIVE":
+            props.collection_active = bpy.data.collections[self.index]
         
         #NOTE THIS HING BRUHHHHHHH
         
@@ -78,13 +81,16 @@ class ITERATE_MODEL_OT_SelectCollection(bpy.types.Operator):
             # Create a new collection and link it to the scene.
             colNew = bpy.data.collections.new("Collection")
             props.collection_parent = colNew
+            #Links new collection to Master Collection
             scene.collection.children.link(colNew)
             
-            #Creates new Group Collection
-            colNew2 = bpy.data.collections.new(props.group_name)
-            #Links colNew2 to collection_parent
-            props.collection_active = colNew2
-            props.collection_parent.children.link(colNew2)
+            #If collection active isn't none, make a new one for it, or don't change Active Collection
+            if props.collection_active is None:
+                #Creates new Group Collection
+                colNew2 = bpy.data.collections.new(props.group_name)
+                #Links colNew2 to collection_parent
+                props.collection_active = colNew2
+                props.collection_parent.children.link(colNew2)
             
         self.type == "DEFAULT"
         
@@ -103,7 +109,7 @@ class ITERATE_MODEL_OT_GroupOperators(bpy.types.Operator):
         scene = bpy.context.scene
         props = scene.IM_Props
         
-        return props.collection_parent is not None
+        return True#props.collection_parent is not None
     
     def execute(self, context):
         scene = bpy.context.scene
@@ -111,16 +117,22 @@ class ITERATE_MODEL_OT_GroupOperators(bpy.types.Operator):
         
         #New Collection Group inside Parent Collection and set as Active Collection
         if self.type == "NEW_GROUP":
+            
+            colNew = bpy.data.collections.new(props.group_name)
+            #Links colNew2 to collection_parent
+            props.collection_active = colNew
+            
+            #If there is a specified Parent collection
             if props.collection_parent is not None:
-                colNew = bpy.data.collections.new(props.group_name)
-                #Links colNew2 to collection_parent
-                props.collection_active = colNew
                 props.collection_parent.children.link(colNew)
-                
-                #Removes collections from all IM_Props.collections.collection
-                for i in enumerate(props.collections):
-                    i[1].collection = None
-                    i[1].duplicates = 0
+            #if collection_parent is None, link new Collection to Master Collection
+            else:
+                bpy.context.scene.collection.children.link(colNew)
+            
+            #Removes collections from all IM_Props.collections.collection
+            for i in enumerate(props.collections):
+                i[1].collection = None
+                i[1].duplicates = 0
         
         self.type == "DEFAULT"
         
@@ -147,27 +159,6 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
         props = scene.IM_Props
         #inputs = context.preferences.inputs
         #bpy.context.preferences.inputs.view_rotate_method
-        
-        #collection_parent:
-        #collection_active: 
-        #collections:
-            #collection:
-            #object:
-            #duplicates:
-            #recent:
-        
-        #If somehow, you have a collection in props.collection_active, but not one in props.collection_parent
-        """if props.collection_parent is None:
-            # Create a new collection and link it to the scene.
-            colNew = bpy.data.collections.new("Collection")
-            props.collection_parent = colNew
-            scene.collection.children.link(colNew)
-            
-            #Creates new Group Collection
-            colNew2 = bpy.data.collections.new(props.group_name)
-            #Links colNew2 to collection_parent
-            props.collection_active = colNew2
-            props.collection_parent.children.link(colNew2) """
         
         if self.type == "DUPLICATE":
             
@@ -474,9 +465,6 @@ class ITERATE_MODEL_MT_CollectionsMenu(bpy.types.Menu):
     bl_label = "Select a Collection"
     bl_description = "Menu That Displays all Collections in Scene"
     
-    if bpy.context.scene.IM_Props.collection_parent is not None:
-        bl_label = bpy.context.scene.IM_Props.collection_parent.name
-    
     # here you specify how they are drawn
     def draw(self, context):
         layout = self.layout
@@ -484,13 +472,13 @@ class ITERATE_MODEL_MT_CollectionsMenu(bpy.types.Menu):
         data = bpy.data
         props = scene.IM_Props
         masterCol = bpy.context.scene.collection
-        
         #collection_parent:
         #collection_active: 
         #collections:
         
         col = layout.column()
         
+        #if self.type == "COLLECTION":
         
         row = col.row(align=True)
         
@@ -509,7 +497,37 @@ class ITERATE_MODEL_MT_CollectionsMenu(bpy.types.Menu):
                 row = col.row(align=True)
         else:
             #NEW_COLLECTION
-            button = row.operator("iteratemodel.collection_ops", text=i[1].name)
+            button = row.operator("iteratemodel.collection_ops", text="Add Collection", icon="ADD")
+            button.type = "NEW_COLLECTION"
+            #bpy.data.collections.new("Boi") 
+        #row.prop(self, "ui_tab", expand=True)#, text="X")
+        
+class ITERATE_MODEL_MT_CollectionsMenuActive(bpy.types.Menu):
+    bl_idname = "ITERATE_MODEL_MT_CollectionsMenuActive"
+    bl_label = "Select a Collection for Active"
+    bl_description = "Menu That Displays all Collections in Scene"
+    
+    # here you specify how they are drawn
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        data = bpy.data
+        props = scene.IM_Props
+        
+        col = layout.column()
+        
+        row = col.row(align=True)
+        
+        if len(bpy.data.collections) > 0:
+            for i in enumerate(bpy.data.collections):
+                button = row.operator("iteratemodel.collection_ops", text=i[1].name)
+                button.type = "SELECT_ACTIVE"
+                button.index = i[0]
+                
+                row = col.row(align=True)
+        else:
+            #NEW_COLLECTION
+            button = row.operator("iteratemodel.collection_ops", text="Add Collection", icon = "ADD")
             button.type = "NEW_COLLECTION"
             #bpy.data.collections.new("Boi") 
         #row.prop(self, "ui_tab", expand=True)#, text="X")
@@ -578,52 +596,56 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         #Layout Starts
         col = layout.column()
         
+        #Parent Collection
         row = col.row(align=True)
         row.label(text="Parent Collection:")
         
         row = col.row(align=True)
         
-        Menu1Name = "Select Collection"
+        MenuName1 = "Select Collection"
         
         if props.collection_parent is not None:
-            Menu1Name = props.collection_parent.name
+            MenuName1 = props.collection_parent.name
         
-        #if props.collection_parent is None:
+        #Lock Icon
         if props.lock_parent == False:
             row.prop(scene.IM_Props, "lock_parent", icon="UNLOCKED", text="")
-            #If a collection exists
-            if len(bpy.data.collections) > 0:
-                #row = col.row(align=True)
-                row.menu("ITERATE_MODEL_MT_CollectionsMenu", icon="GROUP", text=Menu1Name)
-                row.operator("iteratemodel.collection_ops", icon="ADD", text="").type = "NEW_COLLECTION"
-            else:
-                row.operator("iteratemodel.collection_ops", icon="ADD", text="Add Collection").type = "NEW_COLLECTION"
-            
-        else: 
-            
-            #row = col.row(align=True)
+        else:
             row.prop(scene.IM_Props, "lock_parent", icon="LOCKED", text="")
+        
+        #if props.collection_parent is None:
+        if props.lock_parent == False or props.collection_parent is None:
+            row.menu("ITERATE_MODEL_MT_CollectionsMenu", icon="GROUP", text=MenuName1)
+        else:
+            row.prop(scene.IM_Props.collection_parent, "name", icon="GROUP", text="")
             
-            if props.collection_parent is not None:
-                row.prop(scene.IM_Props.collection_parent, "name", icon="GROUP", text="")
-            else:
-                row.menu("ITERATE_MODEL_MT_CollectionsMenu", icon="GROUP", text=Menu1Name)
-            row.operator("iteratemodel.collection_ops", icon="ADD", text="").type = "NEW_COLLECTION"
+        row.operator("iteratemodel.collection_ops", icon="ADD", text="").type = "NEW_COLLECTION"
         
-        row = col.row(align=True)        
-        row.prop(scene.IM_Props, "collection_parent", icon="GROUP", text="")
-        
+        #Active Collection
         row = col.row(align=True)
         row.label(text="Active Collection:")
         
         row = col.row(align=True)
-        if scene.IM_Props.collection_active is not None:
-            row.prop(scene.IM_Props.collection_active, "name", icon="GROUP", text="")
-        else:
-            row.enabled = False
-            row.prop(scene.IM_Props, "collection_active", icon="GROUP", text="")
-        row.operator("iteratemodel.group_ops", icon="ADD", text="").type = "NEW_GROUP"
+        
+        MenuName2 = "Select Collection"
+        
+        if props.collection_active is not None:
+            MenuName2 = props.collection_active.name
             
+        #Lock Icon
+        if props.lock_active == False:
+            row.prop(scene.IM_Props, "lock_active", icon="UNLOCKED", text="")
+        else:
+            row.prop(scene.IM_Props, "lock_active", icon="LOCKED", text="")
+            
+        #if props.collection_active is None:
+        if props.lock_active == False or props.collection_active is None:
+            row.menu("ITERATE_MODEL_MT_CollectionsMenuActive", icon="GROUP", text=MenuName2)
+        else:
+            row.prop(scene.IM_Props.collection_active, "name", icon="GROUP", text="")
+            
+        row.operator("iteratemodel.group_ops", icon="ADD", text="").type = "NEW_GROUP"
+        
         #Duplicate Button
         row = col.row(align=True)
         row.operator("iteratemodel.duplicating_ops", icon="DUPLICATE", text="Iterate").type = "DUPLICATE"
@@ -712,6 +734,9 @@ class ITERATE_MODEL_PT_ListDisplayMenu2(bpy.types.Panel):
         
         row = col.row(align=True)
         row.prop(props, "edit_mode", text="Edit Mode", icon="TEXT")
+        
+        row = col.row(align=True)
+        row.prop(props, "group_name", text="Name", icon="NONE")
         
         col = layout.column(align=True)
         
@@ -836,6 +861,7 @@ classes = (
     
     ITERATE_MODEL_UL_items,
     ITERATE_MODEL_MT_CollectionsMenu,
+    ITERATE_MODEL_MT_CollectionsMenuActive,
     
     ITERATE_MODEL_MT_ListDisplayMenu,
     ITERATE_MODEL_PT_CustomPanel1,
