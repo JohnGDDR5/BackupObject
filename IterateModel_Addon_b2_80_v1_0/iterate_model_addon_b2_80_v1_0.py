@@ -24,7 +24,7 @@ bl_info = {
     "author": "Juan Cardenas (JohnGDDR5)",
     "version": (1, 0), 
     "blender": (2, 80, 0),
-    "location": "Preferences: 3D View > view3d.toggle_orbit_method",
+    "location": "3D View > Side Bar > Iterate Model",
     "warning": "In Development",
     "support": "COMMUNITY",
     "category": "Scene"
@@ -33,10 +33,10 @@ bl_info = {
 import bpy
         
 from bpy.props import *
-from math import pi, radians
-from mathutils import Matrix, Vector, Euler
-import decimal
-import copy
+#from math import pi, radians
+#from mathutils import Matrix, Vector, Euler
+#import decimal
+#import copy
 
 
 class ITERATE_MODEL_OT_SelectCollection(bpy.types.Operator):
@@ -124,6 +124,56 @@ class ITERATE_MODEL_OT_GroupOperators(bpy.types.Operator):
         self.type == "DEFAULT"
         
         return {'FINISHED'}
+
+def objectIcon(object):
+    scene = bpy.context.scene
+    data = bpy.data
+    props = scene.IM_Props
+    
+    #icons = ["OUTLINER_OB_EMPTY", "OUTLINER_OB_MESH", "OUTLINER_OB_CURVE", "OUTLINER_OB_LATTICE", "OUTLINER_OB_META", "OUTLINER_OB_LIGHT", "OUTLINER_OB_IMAGE", "OUTLINER_OB_CAMERA", "OUTLINER_OB_ARMATURE", "OUTLINER_OB_FONT", "OUTLINER_OB_SURFACE", "OUTLINER_OB_SPEAKER", "OUTLINER_OB_FORCE_FIELD", "OUTLINER_OB_GREASEPENCIL", "OUTLINER_OB_LIGHTPROBE"]
+    #Object Type
+    
+    icon = "BLANK1"
+    
+    #If there is an object to see if it has a type
+    if object is not None:
+        type = object.type
+        
+        if type == "MESH":
+            icon = "OUTLINER_OB_MESH"
+        elif type == "EMPTY":
+            if object.empty_display_type != "IMAGE":
+                icon = "OUTLINER_OB_EMPTY"
+            elif object.empty_display_type == "IMAGE":
+                icon = "OUTLINER_OB_IMAGE"
+            elif object.field.type != "NONE":
+                icon = "OUTLINER_OB_FORCE_FIELD"
+        elif type == "CAMERA":
+            icon = "OUTLINER_OB_CAMERA"
+        elif type == "CURVE":
+            icon = "OUTLINER_OB_CURVE"
+        elif type == "SURFACE":
+            icon = "OUTLINER_OB_SURFACE"
+        elif type == "META":
+            icon = "OUTLINER_OB_META"
+        elif type == "FONT":
+            icon = "OUTLINER_OB_FONT"
+        elif type == "GPENCIL":
+            icon = "OUTLINER_OB_GREASEPENCIL"
+        elif type == "ARMATURE":
+            icon = "OUTLINER_OB_ARMATURE"
+        elif type == "LATTICE":
+            icon = "OUTLINER_OB_LATTICE"
+        elif type == "LIGHT":
+            icon = "OUTLINER_OB_LIGHT"
+        elif type == "LIGHT_PROBE":
+            icon = "OUTLINER_OB_LIGHTPROBE"
+        elif type == "SPEAKER":
+            icon = "OUTLINER_OB_SPEAKER"
+        else:
+            pass
+    
+    return icon
         
 class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
     bl_idname = "iteratemodel.duplicating_ops"
@@ -211,7 +261,7 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                     
                     print("existingCol: %s" % (str(existingCol)))
                     
-                    #If object wasn't found inside props.collections.object
+                    #If object wasn't found inside props.collections as .object
                     if existingCol == None:
                         colNew2 = bpy.data.collections.new(i[1].name)
                         #Links colNew2 to collection_parent
@@ -232,8 +282,19 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                         #Custom Index will be in order if it is a new props.collection
                         propsCol.custom += len(props.collections)
                         
+                        #Adds icon name to props.collection object to display in Viewport
+                        propsCol.icon = objectIcon(propsCol.object)
+                        
                         #Hides Collection
                         propsCol.collection.hide_viewport = True
+                        
+                        if props.hide_objects == True:
+                            #propsCol.object.hide_viewport = False
+                            
+                            #Temporarily hides in the viewport
+                            bpy.context.object.hide_set(True)
+                            #Hides object from rendering
+                            bpy.context.object.hide_render = True
                         
                         print("If: None")
                         
@@ -404,56 +465,6 @@ class ITERATE_MODEL_OT_UIOperators(bpy.types.Operator):
         
         return {'FINISHED'}
 
-def objectIcon(object):
-    scene = bpy.context.scene
-    data = bpy.data
-    props = scene.IM_Props
-    
-    #icons = ["OUTLINER_OB_EMPTY", "OUTLINER_OB_MESH", "OUTLINER_OB_CURVE", "OUTLINER_OB_LATTICE", "OUTLINER_OB_META", "OUTLINER_OB_LIGHT", "OUTLINER_OB_IMAGE", "OUTLINER_OB_CAMERA", "OUTLINER_OB_ARMATURE", "OUTLINER_OB_FONT", "OUTLINER_OB_SURFACE", "OUTLINER_OB_SPEAKER", "OUTLINER_OB_FORCE_FIELD", "OUTLINER_OB_GREASEPENCIL", "OUTLINER_OB_LIGHTPROBE"]
-    #Object Type
-    
-    icon = "NONE"
-    
-    #If there is an object to see if it has a type
-    if object is not None:
-        type = object.type
-        
-        if type == "MESH":
-            icon = "OUTLINER_OB_MESH"
-        elif type == "EMPTY":
-            if object.empty_display_type != "IMAGE":
-                icon = "OUTLINER_OB_EMPTY"
-            elif object.empty_display_type == "IMAGE":
-                icon = "OUTLINER_OB_IMAGE"
-            elif object.field.type != "NONE":
-                icon = "OUTLINER_OB_FORCE_FIELD"
-        elif type == "CAMERA":
-            icon = "OUTLINER_OB_CAMERA"
-        elif type == "CURVE":
-            icon = "OUTLINER_OB_CURVE"
-        elif type == "SURFACE":
-            icon = "OUTLINER_OB_SURFACE"
-        elif type == "META":
-            icon = "OUTLINER_OB_META"
-        elif type == "FONT":
-            icon = "OUTLINER_OB_FONT"
-        elif type == "GPENCIL":
-            icon = "OUTLINER_OB_GREASEPENCIL"
-        elif type == "ARMATURE":
-            icon = "OUTLINER_OB_ARMATURE"
-        elif type == "LATTICE":
-            icon = "OUTLINER_OB_LATTICE"
-        elif type == "LIGHT":
-            icon = "OUTLINER_OB_LIGHT"
-        elif type == "LIGHT_PROBE":
-            icon = "OUTLINER_OB_LIGHTPROBE"
-        elif type == "SPEAKER":
-            icon = "OUTLINER_OB_SPEAKER"
-        else:
-            pass
-    
-    return icon
-
 class ITERATE_MODEL_UL_items(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         scene = bpy.context.scene
@@ -469,8 +480,12 @@ class ITERATE_MODEL_UL_items(bpy.types.UIList):
             if len(IMCollect) > 0:
                 #Displays icon of objects in list
                 if props.display_icons == True:
-                    obIcon = objectIcon(item.object)
-                    row.label(text="", icon=obIcon)
+                    
+                    if item.object != "EMPTY" or item.icon != "NONE":
+                        row.label(text="", icon=item.icon)
+                    else:
+                        obIcon = objectIcon(item.object)
+                        row.label(text="", icon=obIcon) 
                     
                 row.label(text=info)#, icon="OUTLINER_OB_MESH")
                 #"OUTLINER_OB_MESH" for mesh, "OUTLINER_OB_IMAGE" for empty
@@ -556,44 +571,6 @@ class ITERATE_MODEL_MT_CollectionsMenuActive(bpy.types.Menu):
             button.type = "NEW_COLLECTION"
             #bpy.data.collections.new("Boi") 
         #row.prop(self, "ui_tab", expand=True)#, text="X")
-        
-class ITERATE_MODEL_MT_ListDisplayMenu(bpy.types.Menu):
-    bl_idname = "ITERATE_MODEL_MT_ListDisplayMenu"
-    bl_label = "Select a Collection"
-    bl_description = "Menu That Displays all Collections in Scene"
-    
-    # here you specify how they are drawn
-    def draw(self, context):
-        layout = self.layout
-        scene = context.scene
-        data = bpy.data
-        props = scene.IM_Props
-        
-        #collection_parent:
-        #collection_active: 
-        #collections:
-        
-        col = layout.column()
-        
-        row = col.row(align=True)
-        row.label(text="Display Order")
-        
-        row = col.row(align=True)
-        row.prop(props, "list_order", expand=True)#, text="X")
-        
-        row = col.row(align=True)
-        row.prop_enum(scene.IM_Props, "list_reverse", "DUPLICATES", text_ctxt="", translate=True)
-        
-        row = col.row(align=True)
-        row.separator()
-        
-        row = col.row(align=True)
-        row.label(text="Sort Order")
-        
-        row = col.row(align=True)
-        row.prop(props, "list_reverse", expand=True)#, text="X")
-
-
     
 class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
     #A Custom Panel in Viewport
@@ -634,15 +611,15 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         
         #Lock Icon
         if props.lock_parent == False:
-            row.prop(scene.IM_Props, "lock_parent", icon="UNLOCKED", text="")
+            row.prop(props, "lock_parent", icon="UNLOCKED", text="")
         else:
-            row.prop(scene.IM_Props, "lock_parent", icon="LOCKED", text="")
+            row.prop(props, "lock_parent", icon="LOCKED", text="")
         
         #if props.collection_parent is None:
         if props.lock_parent == False or props.collection_parent is None:
             row.menu("ITERATE_MODEL_MT_CollectionsMenuParent", icon="GROUP", text=MenuName1)
         else:
-            row.prop(scene.IM_Props.collection_parent, "name", icon="GROUP", text="")
+            row.prop(props.collection_parent, "name", icon="GROUP", text="")
             
         row.operator("iteratemodel.group_ops", icon="ADD", text="").type = "NEW_COLLECTION"
         
@@ -659,15 +636,15 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
             
         #Lock Icon
         if props.lock_active == False:
-            row.prop(scene.IM_Props, "lock_active", icon="UNLOCKED", text="")
+            row.prop(props, "lock_active", icon="UNLOCKED", text="")
         else:
-            row.prop(scene.IM_Props, "lock_active", icon="LOCKED", text="")
+            row.prop(props, "lock_active", icon="LOCKED", text="")
             
         #if props.collection_active is None:
         if props.lock_active == False or props.collection_active is None:
             row.menu("ITERATE_MODEL_MT_CollectionsMenuActive", icon="GROUP", text=MenuName2)
         else:
-            row.prop(scene.IM_Props.collection_active, "name", icon="GROUP", text="")
+            row.prop(props.collection_active, "name", icon="GROUP", text="")
             
         row.operator("iteratemodel.group_ops", icon="ADD", text="").type = "NEW_GROUP"
         
@@ -683,9 +660,9 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         col = split.column(align=True)
         
         row = col.row(align=True)
-        row.template_list("ITERATE_MODEL_UL_items", "custom_def_list", scene.IM_Props, "collections", scene.IM_Props, "IM_ULIndex", rows=3)
+        row.template_list("ITERATE_MODEL_UL_items", "custom_def_list", props, "collections", props, "IM_ULIndex", rows=3)
         
-        if scene.IM_Props.edit_mode == True:
+        if props.edit_mode == True:
             
             col = split.column(align=True)
             
@@ -702,7 +679,10 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
             button.type = "REMOVE"
             
             row = col.row(align=True)
-            row.prop(scene.IM_Props, "edit_mode", text="", icon="TEXT")
+            row.prop(props, "display_icons", text="", icon="OUTLINER_OB_MESH")
+            
+            row = col.row(align=True)
+            row.prop(props, "edit_mode", text="", icon="TEXT")
         
         #End of CustomPanel
 
@@ -725,10 +705,6 @@ class ITERATE_MODEL_PT_ListDisplayMenu2(bpy.types.Panel):
         #collections:
         
         col = layout.column()
-        
-        #row = col.row(align=True)
-        #row.label(text="Display Icons")
-        
         
         row = col.row(align=True)
         row.label(text="Display Order")
@@ -761,20 +737,30 @@ class ITERATE_MODEL_PT_ListDisplayMenu2(bpy.types.Panel):
         #row.prop(props, "group_name", text="Name", icon="NONE")
         row.prop(props, "group_name", text="", icon="NONE")
         
+        """
+        row = col.row(align=True)
+        row.label(text="Hide Objects when Iterating")
+        
+        row.prop(props, "hide_objects", text="", icon="HIDE_OFF") """
+        
+        row = col.row(align=True)
+        #row.label(text="Hide Objects when Iterating")
+        
+        row.prop(props, "hide_objects", text="Hide Objects when Iterating", icon="HIDE_OFF")
+        
         col = layout.column(align=True)
         
         row = col.row(align=True)
         row.separator()
         
-        #Debug Operators
-        row = col.row(align=True)
-        row.label(text="Debug Ops:")
+        if props.debug_mode == True:
+            #Debug Operators
+            row = col.row(align=True)
+            row.label(text="Debug Ops:")
+            
+            row = col.row(align=True)
+            row.operator("iteratemodel.debug", text="Delete All").type = "DELETE"
         
-        row = col.row(align=True)
-        row.operator("iteratemodel.debug", text="Delete All").type = "DELETE"
-        
-        #row = col.row(align=True)
-        #row.prop_menu_enum(scene.IM_Props, "list_reverse", text_ctxt="", translate=True)#, icon='NONE')
 
 def ListOrderUpdate(self, context):
     scene = bpy.context.scene
@@ -841,6 +827,42 @@ def pollBruh(self, object):
     print("Collection Parent Name: "+str(object))
     
     return
+    
+class ITERATE_MODEL_PreferencesMenu(bpy.types.AddonPreferences):
+    bl_idname = "iterate_model_addon_b2_80_v1_0"
+    # here you define the addons customizable props
+    ui_tab: bpy.props.EnumProperty(name="Enum", items= [("GENERAL", "General", "General Options"), ("ABOUT", "About", "About Author & Where to Support")], description="Iterate Model UI Tabs", default="GENERAL")
+    
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        props = scene.IM_Props
+        
+        col = layout.column()
+        
+        row = col.row(align=True)
+        row.prop(self, "ui_tab", expand=True)
+        row = col.row(align=True)
+        
+        box = layout.box()
+        col = box.column()
+        #row = col.row(align=True)
+        
+        if self.ui_tab == "GENERAL":
+            row = col.row(align=True)
+            #row.label(text="Add Button to 3D Viewport Header?")
+            row.prop(props, "debug_mode", expand=True, text="Debug Mode")
+            
+            row = col.row(align=True)
+            #row.label(text="Add Button to 3D Viewport Header?")
+            row.prop(props, "hide_objects", expand=True, text="Hide Objects when Iterating them")
+            
+        elif self.ui_tab == "ABOUT":
+            row = col.row(align=True)
+            row.label(text="JohnGDDR5 on: ")
+            row.operator("wm.url_open", text="Youtube").url = "https://www.youtube.com/channel/UCzPZvV24AXpOBEQWK4HWXIA"
+            row.operator("wm.url_open", text="Twitter").url = "https://twitter.com/JohnGDDR5"
+            row.operator("wm.url_open", text="Artstation").url = "https://www.artstation.com/johngddr5"
 
 class ITERATE_MODEL_CollectionObjects(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="", default="")
@@ -849,6 +871,7 @@ class ITERATE_MODEL_CollectionObjects(bpy.types.PropertyGroup):
     duplicates: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     recent: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     custom: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
+    icon: bpy.props.StringProperty(name="Icon name for object", description="Used to display in the list", default="NONE")#, get=)#, update=checkIcon)
     
 class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     collection_parent: bpy.props.PointerProperty(name="Collection to add Groups to", type=bpy.types.Collection, update=printBruh, poll=pollBruh)
@@ -874,6 +897,10 @@ class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     
     display_icons: bpy.props.BoolProperty(name="Display Icons", description="Display icons of objects in the list", default=True)
     
+    debug_mode: bpy.props.BoolProperty(name="Display Debug Operators", description="To aid in Debugging Operators. Displayed in \"Display Settings\"", default=False)
+    
+    hide_objects: bpy.props.BoolProperty(name="Hide Objects When Iterating", description="Hides Iterated objects once duplicated in their collections.", default=False)
+    
     #list_order: "DUPLICATES" "RECENT" "CUSTOM"
     #list_reverse: "DESCENDING" "ASCENDING"
     
@@ -889,10 +916,10 @@ classes = (
     ITERATE_MODEL_MT_CollectionsMenuParent,
     ITERATE_MODEL_MT_CollectionsMenuActive,
     
-    ITERATE_MODEL_MT_ListDisplayMenu,
     ITERATE_MODEL_PT_CustomPanel1,
     ITERATE_MODEL_PT_ListDisplayMenu2,
     
+    ITERATE_MODEL_PreferencesMenu,
     ITERATE_MODEL_CollectionObjects,
     ITERATE_MODEL_Props,
 )
