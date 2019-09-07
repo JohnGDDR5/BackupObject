@@ -228,7 +228,8 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                 for i in enumerate(previous_selected):
                     existingCol = None
                     existingColName = ""
-                    
+                    #lastOb = None
+                    #All objects in previous_selected have been deselected, and all duplicated objects have been selected in "ob"
                     ob = bpy.context.selected_objects[i[0]]
                     
                     #Unlinks duplicate from all collections it is linked to
@@ -239,7 +240,7 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                     for j in enumerate(props.collections):
                         #If object is already registered in props.collections:object
                         if i[1] == j[1].object:
-                            existingCol = j[0]
+                            existingCol = j[1]
                             
                             #If IM_Props.collections.collection is None (Ex. when a New Group collection is made)
                             if j[1].collection is None:
@@ -255,6 +256,8 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                             j[1].collection.objects.link(ob)
                             j[1].duplicates += 1
                             j[1].name = j[1].collection.name
+                            
+                            #lastOb = 
                             
                             print("For: 1")
                             break
@@ -288,16 +291,24 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                         #Hides Collection
                         propsCol.collection.hide_viewport = True
                         
-                        if props.hide_objects == True:
-                            #propsCol.object.hide_viewport = False
-                            
-                            #Temporarily hides in the viewport
-                            bpy.context.object.hide_set(True)
-                            #Hides object from rendering
-                            bpy.context.object.hide_render = True
-                        
                         print("If: None")
-                        
+                    
+                    #If hide all except most recent object is True
+                    if props.hide_objects == True:
+                        #Checks if there is more than one object in collection
+                        if len(existingCol.collection.objects[0:-1]) > 0:
+                            #Goes through all object's except the most recent/last one added
+                            for y in enumerate(existingCol.collection.objects[0:-1]):
+                                #Temporarily hides in the viewport
+                                y[1].hide_set(True)
+                                #Hides object from rendering
+                                y[1].hide_render = True
+                        #lastOb = i
+                        #Doesn't Temporarily hides in the viewport
+                        ob.hide_set(False)
+                        #Doesn't Hide object from rendering
+                        ob.hide_render = False
+                    
                     #Unselects duplicated object
                     ob.select_set(False)
                     #Selects previously selected object
@@ -899,7 +910,7 @@ class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     
     debug_mode: bpy.props.BoolProperty(name="Display Debug Operators", description="To aid in Debugging Operators. Displayed in \"Display Settings\"", default=False)
     
-    hide_objects: bpy.props.BoolProperty(name="Hide Objects When Iterating", description="Hides Iterated objects once duplicated in their collections.", default=False)
+    hide_objects: bpy.props.BoolProperty(name="Hide All Except Recent Objects", description="Hides All Iterated objects, execpt the most recent. (For easy viewing of most recent duplicated objects)", default=False)
     
     #list_order: "DUPLICATES" "RECENT" "CUSTOM"
     #list_reverse: "DESCENDING" "ASCENDING"
