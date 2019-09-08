@@ -74,7 +74,7 @@ class ITERATE_MODEL_OT_SelectCollection(bpy.types.Operator):
         return {'FINISHED'}
 
 class ITERATE_MODEL_OT_GroupOperators(bpy.types.Operator):
-    bl_idname = "iteratemodel.group_ops"
+    bl_idname = "iteratemodel.collection_ops"
     bl_label = "IterateModel Duplicating Operators"
     bl_description = "IterateModel Duplicating Operators"
     bl_options = {'UNDO',}
@@ -190,7 +190,7 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
         props = scene.IM_Props
         
         #return props.collection_parent is not None and props.collection_active is not None
-        return props.collection_active is not None
+        return True#props.collection_active is not None
     
     def execute(self, context):
         scene = bpy.context.scene
@@ -209,12 +209,7 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                 #Sets collection_active as colNew
                 props.collection_active = colNew
                 
-                #If collection of collection_parent is deleted or None, set it to Master Collection
-                if props.collection_parent is None:
-                    #The only way to access Master Collection is by "bpy.context.scene.collection"
-                    props.collection_parent = bpy.context.scene.collection
-                #Links colNew to collection_parent
-                props.collection_parent.children.link(colNew)
+                bpy.context.scene.collection.children.link(colNew)
             
             if len(bpy.context.selected_objects) > 0:
                 
@@ -291,23 +286,28 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                         #Hides Collection
                         propsCol.collection.hide_viewport = True
                         
-                        print("If: None")
+                        existingCol = propsCol
                     
                     #If hide all except most recent object is True
-                    if props.hide_objects == True:
-                        #Checks if there is more than one object in collection
-                        if len(existingCol.collection.objects[0:-1]) > 0:
-                            #Goes through all object's except the most recent/last one added
-                            for y in enumerate(existingCol.collection.objects[0:-1]):
-                                #Temporarily hides in the viewport
-                                y[1].hide_set(True)
-                                #Hides object from rendering
-                                y[1].hide_render = True
-                        #lastOb = i
-                        #Doesn't Temporarily hides in the viewport
-                        ob.hide_set(False)
-                        #Doesn't Hide object from rendering
-                        ob.hide_render = False
+                    #if props.hide_objects == True:
+                    #Checks if there is more than one object in collection
+                    if len(existingCol.collection.objects) > 1:
+                        #Goes through all object's except the most recent/last one added
+                        for y in enumerate(existingCol.collection.objects[0:-1]):
+                            #Temporarily hides in the viewport
+                            y[1].hide_set(True)
+                            #Hides object from rendering
+                            y[1].hide_render = True
+                            #Doesn't Hide object from rendering
+                            y[1].hide_viewport = True
+                    #lastOb = i
+                    #if props.hide_types[0] == True:
+                    #Doesn't Temporarily hides in the viewport
+                    ob.hide_set(not props.hide_types[0])
+                    #Doesn't Hide object from rendering
+                    ob.hide_render = not props.hide_types[1]
+                    #Doesn't Hide object from rendering
+                    ob.hide_viewport = not props.hide_types[2]
                     
                     #Unselects duplicated object
                     ob.select_set(False)
@@ -327,17 +327,183 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
             
             #Calls the update function ListOrderUpdate to change locations of props.collections
             ListOrderUpdate(self, context)
-            
-            #list_order "DUPLICATES" "RECENT" "CUSTOM"
-            #list_reverse: "DESCENDING" "ASCENDING"
-            """        
-            else:
-                if props.collection_active is not None:
-                    
-                    def findActiveCol(active_col):
-                        return """
                         
         self.type == "DEFAULT"
+        
+        return {'FINISHED'}
+        
+class ITERATE_MODEL_OT_ToggleHideExRecent(bpy.types.Operator):
+    bl_idname = "iteratemodel.toggle_hide_ex_recent"
+    bl_label = "Toggles Hide Except Recent"
+    bl_description = "Toggles Hide All Except Recent Iteration"
+    bl_options = {'UNDO',}
+    
+    state: bpy.props.BoolProperty(default=True)
+    type: bpy.props.StringProperty(default="DEFAULT")
+    index: bpy.props.IntProperty(default=0, min=0)
+    
+    @classmethod
+    def poll(cls, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+        
+        #return props.collection_parent is not None and props.collection_active is not None
+        return props.collection_active is not None
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+        #inputs = context.preferences.inputs
+        #bpy.context.preferences.inputs.view_rotate_method
+        
+        if self.type == "DEFAULT":
+            
+            #if props.collection_parent is not None:
+                #Was here before
+            #Iterates through every collection inside collection_active
+            for i in enumerate(bpy.context.scene.IM_Props.collection_active.children):
+                lastObject = len(i[1].objects)-1
+                
+                #If there is at least one object in a collection
+                if len(i[1].objects) > 0:
+                    #Every object, except the last(most recent) one
+                    for j in enumerate(i[1].objects[0:-1]):
+                        #Temporarily hides in the viewport
+                        j[1].hide_set(self.state)
+                        #Hides object from rendering
+                        j[1].hide_render = self.state
+                        #Hides object from viewport
+                        j[1].hide_viewport = self.state
+                        
+                #Last Object
+                #If hide_types' Booleans are True, the Last Object's hidden stays Off. Else, they can be toggle on or off by the opeartor
+                if props.hide_types[0] == True:
+                    i[1].objects[lastObject].hide_set(False)
+                else:
+                    i[1].objects[lastObject].hide_set(self.state)
+                    
+                if props.hide_types[1] == True:
+                    i[1].objects[lastObject].hide_render = False
+                else:
+                    i[1].objects[lastObject].hide_render = self.state
+                    
+                if props.hide_types[2] == True:
+                    i[1].objects[lastObject].hide_viewport = False
+                else:
+                    i[1].objects[lastObject].hide_viewport = self.state
+                #i[1].objects[lastObject].hide_render = not props.hide_types[1]
+                #i[1].objects[lastObject].hide_viewport = not props.hide_types[2]
+            
+                        
+        self.type == "DEFAULT"
+        
+        #Changes the state the operator hides and unhides properties, True or False
+        if self.state == True:
+            self.state = False
+        else:
+            self.state = True
+        
+        return {'FINISHED'}
+        
+class ITERATE_MODEL_OT_OffsetCollection(bpy.types.Operator):
+    bl_idname = "iteratemodel.offset_collection"
+    bl_label = "Toggles Hide Except Recent"
+    bl_description = "Toggles Hide All Except Recent Iteration"
+    bl_options = {'UNDO',}
+    
+    state: bpy.props.BoolProperty(default=True)
+    type: bpy.props.StringProperty(default="DEFAULT")
+    index: bpy.props.IntProperty(default=0, min=0)
+    
+    @classmethod
+    def poll(cls, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+        
+        #return props.collection_parent is not None and props.collection_active is not None
+        return props.collection_active is not None
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+        #inputs = context.preferences.inputs
+        #bpy.context.preferences.inputs.view_rotate_method
+        
+        #props.master_axis
+        #props.master_offset
+        def findAxis(input):
+            indexAxis = 0
+            if input == "X":
+                indexAxis = 0
+            elif input == "Y":
+                indexAxis = 1
+            elif input == "Z":
+                indexAxis = 2
+                
+            return indexAxis
+        
+        if self.type == "DEFAULT":
+            
+            #if props.collection_parent is not None:
+            axis = findAxis(props.master_axis)
+            #Collections that are Viewable
+            viewportCollections = []
+            
+            #Appends all viewable collections from IM_Props.collections to viewportCollections
+            for i in enumerate(bpy.context.scene.IM_Props.collections):
+                if i[1].collection.hide_viewport == False:
+                    viewportCollections.append(i[1])
+                
+            #Iterates through every collection inside viewportCollections
+            for i in enumerate(viewportCollections):
+                for j in enumerate(i[1].collection.objects):
+                    #Unhides object
+                    j[1].hide_set(False)
+                    j[1].hide_viewport = False
+                    
+                    j[1].location[axis] += j[0] * props.master_offset 
+                    
+                """
+                lastObject = len(i[1].objects)-1
+                
+                #If there is at least one object in a collection
+                if len(i[1].objects) > 0:
+                    #Every object, except the last(most recent) one
+                    for j in enumerate(i[1].objects[0:-1]):
+                        #Temporarily hides in the viewport
+                        j[1].hide_set(self.state)
+                        #Hides object from rendering
+                        j[1].hide_render = self.state
+                        #Hides object from viewport
+                        j[1].hide_viewport = self.state
+                        
+                #Last Object
+                #If hide_types' Booleans are True, the Last Object's hidden stays Off. Else, they can be toggle on or off by the opeartor
+                if props.hide_types[0] == True:
+                    i[1].objects[lastObject].hide_set(False)
+                else:
+                    i[1].objects[lastObject].hide_set(self.state)
+                    
+                if props.hide_types[1] == True:
+                    i[1].objects[lastObject].hide_render = False
+                else:
+                    i[1].objects[lastObject].hide_render = self.state
+                    
+                if props.hide_types[2] == True:
+                    i[1].objects[lastObject].hide_viewport = False
+                else:
+                    i[1].objects[lastObject].hide_viewport = self.state
+                #i[1].objects[lastObject].hide_render = not props.hide_types[1]
+                #i[1].objects[lastObject].hide_viewport = not props.hide_types[2]
+                """
+                        
+        self.type == "DEFAULT"
+        
+        #Changes the state the operator hides and unhides properties, True or False
+        if self.state == True:
+            self.state = False
+        else:
+            self.state = True
         
         return {'FINISHED'}
         
@@ -369,12 +535,16 @@ class ITERATE_MODEL_OT_Debugging(bpy.types.Operator):
                         
                     props.collections.remove(len(props.collections)-1)
                     
-                colNames = [props.collection_parent.name, props.collection_active.name]
+                colNameActive = props.collection_active.name
+                colNameParent = "(No Parent Found)"
                 
-                reportString = "Removed: [%s, %s] & %d Objects & %d Collection Groups" % (colNames[0], colNames[1], removedObjects, removedCol)
+                if props.collection_parent is not None:
+                    colNameParent = props.collection_parent.name
+                    
+                reportString = "Removed: [%s, %s] & %d Objects & %d Collection Groups" % (colNameParent, colNameActive, removedObjects, removedCol)
                 
                 bpy.data.collections.remove(props.collection_active, do_unlink=True)
-                bpy.data.collections.remove(props.collection_parent, do_unlink=True)
+                #bpy.data.collections.remove(props.collection_parent, do_unlink=True)
                 
                 print(reportString)
                 self.report({'INFO'}, reportString)
@@ -383,17 +553,17 @@ class ITERATE_MODEL_OT_Debugging(bpy.types.Operator):
                 for i in enumerate(reversed(props.collections)):
                     props.collections.remove(len(props.collections)-1)
                 
-                #If there was a Parent Collection selected
-                if props.collection_parent is not None:
-                    reportString = "Removed: [%s] Collection" % (props.collection_parent.name)
-                    
-                    #Removes collection, but not other links of it incase the user linked it
-                    bpy.data.collections.remove(props.collection_parent, do_unlink=True)
-                else:
-                    reportString = "collection_parent is None"
-                    
-                print(reportString)
-                self.report({'INFO'}, reportString)
+            #If there was a Parent Collection selected
+            if props.collection_parent is not None:
+                reportString = "Removed: [%s] Collection" % (props.collection_parent.name)
+                
+                #Removes collection, but not other links of it incase the user linked it
+                bpy.data.collections.remove(props.collection_parent, do_unlink=True)
+            else:
+                reportString = "collection_parent is None"
+                
+            print(reportString)
+            self.report({'INFO'}, reportString)
                 
         self.type == "DEFAULT"
         
@@ -548,7 +718,7 @@ class ITERATE_MODEL_MT_CollectionsMenuParent(bpy.types.Menu):
                 row = col.row(align=True)
         else:
             #NEW_COLLECTION
-            button = row.operator("iteratemodel.group_ops", text="Add Collection", icon="ADD")
+            button = row.operator("iteratemodel.collection_ops", text="Add Collection", icon="ADD")
             button.type = "NEW_COLLECTION"
             #bpy.data.collections.new("Boi") 
         #row.prop(self, "ui_tab", expand=True)#, text="X")
@@ -578,7 +748,7 @@ class ITERATE_MODEL_MT_CollectionsMenuActive(bpy.types.Menu):
                 row = col.row(align=True)
         else:
             #NEW_COLLECTION
-            button = row.operator("iteratemodel.group_ops", text="Add Collection", icon = "ADD")
+            button = row.operator("iteratemodel.collection_ops", text="Add Collection", icon = "ADD")
             button.type = "NEW_COLLECTION"
             #bpy.data.collections.new("Boi") 
         #row.prop(self, "ui_tab", expand=True)#, text="X")
@@ -632,7 +802,7 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         else:
             row.prop(props.collection_parent, "name", icon="GROUP", text="")
             
-        row.operator("iteratemodel.group_ops", icon="ADD", text="").type = "NEW_COLLECTION"
+        row.operator("iteratemodel.collection_ops", icon="ADD", text="").type = "NEW_COLLECTION"
         
         #Active Collection
         row = col.row(align=True)
@@ -657,7 +827,7 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         else:
             row.prop(props.collection_active, "name", icon="GROUP", text="")
             
-        row.operator("iteratemodel.group_ops", icon="ADD", text="").type = "NEW_GROUP"
+        row.operator("iteratemodel.collection_ops", icon="ADD", text="").type = "NEW_GROUP"
         
         #Duplicate Button
         row = col.row(align=True)
@@ -697,7 +867,68 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         
         #End of CustomPanel
 
-class ITERATE_MODEL_PT_ListDisplayMenu2(bpy.types.Panel):
+class ITERATE_MODEL_PT_IterationCollectionSettings(bpy.types.Panel):
+    bl_label = "Iteration Collection Settings"
+    bl_parent_id = "ITERATE_MODEL_PT_CustomPanel1"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = 'UI'
+    #bl_context = "output"
+    bl_category = "Iterate Model"
+    
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        data = bpy.data
+        props = scene.IM_Props
+        
+        #collection_parent:
+        #collection_active: 
+        #collections:
+        
+        col = layout.column()
+        
+        row = col.row(align=True)
+        row.label(text="Toggle Hide All")
+        
+        #row = col.row(align=True)
+        
+        split = layout.row(align=False)
+        #col = split.row(align=False)
+        
+        #row = col.row(align=False)
+        split.operator("iteratemodel.toggle_hide_ex_recent", text="Toggle Hide All")
+        
+        row = split.row(align=True)
+        #row = col.row(align=True)
+        row.prop(props, "hide_types", index=0, text="", icon="HIDE_OFF")
+        row.prop(props, "hide_types", index=1, text="", icon="RESTRICT_RENDER_OFF")
+        row.prop(props, "hide_types", index=2, text="", icon="RESTRICT_VIEW_OFF")
+        
+        col = layout.column()
+        
+        row = col.row(align=True)
+        #row.label(text="Offset Axis")
+        row.operator("iteratemodel.offset_collection", text="Offset: "+str(round(props.master_offset, 2)))
+        
+        #row = col.row(align=True)
+        #row.label(text="Hide Objects when Iterating")
+        row = col.row(align=True)
+        row.label(text="Offset Axis")
+        row.prop(props, "master_axis", text="", icon="EMPTY_AXIS")#, expand=True)
+        
+        row = col.row(align=True)
+        #row.label(text="Offset")
+        row.prop(props, "master_offset", text=None, icon="ARROW_LEFTRIGHT")
+        
+        row = col.row(align=True)
+        #row.label(text="Offset")
+        row.prop(props, "reset_offsets")#, text=None, icon="ARROW_LEFTRIGHT")
+        
+        #row.prop(props, "hide_objects", text="Hide Objects when Iterating", icon="HIDE_OFF")
+        
+        
+
+class ITERATE_MODEL_PT_DisplaySettings(bpy.types.Panel):
     bl_label = "Display Settings"
     bl_parent_id = "ITERATE_MODEL_PT_CustomPanel1"
     bl_space_type = "VIEW_3D"
@@ -757,7 +988,7 @@ class ITERATE_MODEL_PT_ListDisplayMenu2(bpy.types.Panel):
         row = col.row(align=True)
         #row.label(text="Hide Objects when Iterating")
         
-        row.prop(props, "hide_objects", text="Hide Objects when Iterating", icon="HIDE_OFF")
+        #row.prop(props, "hide_objects", text="Hide Objects when Iterating", icon="HIDE_OFF")
         
         col = layout.column(align=True)
         
@@ -866,7 +1097,7 @@ class ITERATE_MODEL_PreferencesMenu(bpy.types.AddonPreferences):
             
             row = col.row(align=True)
             #row.label(text="Add Button to 3D Viewport Header?")
-            row.prop(props, "hide_objects", expand=True, text="Hide Objects when Iterating them")
+            #row.prop(props, "hide_objects", expand=True, text="Hide Objects when Iterating them")
             
         elif self.ui_tab == "ABOUT":
             row = col.row(align=True)
@@ -883,6 +1114,7 @@ class ITERATE_MODEL_CollectionObjects(bpy.types.PropertyGroup):
     recent: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     custom: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     icon: bpy.props.StringProperty(name="Icon name for object", description="Used to display in the list", default="NONE")#, get=)#, update=checkIcon)
+    offset: bpy.props.FloatProperty(name="Offset", description="Offset for Iterated Objects", default= 1.0)
     
 class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     collection_parent: bpy.props.PointerProperty(name="Collection to add Groups to", type=bpy.types.Collection, update=printBruh, poll=pollBruh)
@@ -908,9 +1140,24 @@ class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     
     display_icons: bpy.props.BoolProperty(name="Display Icons", description="Display icons of objects in the list", default=True)
     
-    debug_mode: bpy.props.BoolProperty(name="Display Debug Operators", description="To aid in Debugging Operators. Displayed in \"Display Settings\"", default=False)
+    debug_mode: bpy.props.BoolProperty(name="Display Debug Operators", description="To aid in Debugging Operators. Displayed in \"Display Settings\"", default=True)
     
+    #For Iterate Collection Settings and Operators
     hide_objects: bpy.props.BoolProperty(name="Hide All Except Recent Objects", description="Hides All Iterated objects, execpt the most recent. (For easy viewing of most recent duplicated objects)", default=False)
+    
+    hide_types: bpy.props.BoolVectorProperty(name="Iterate Object Hide Types", description="Toggle Hidden Types of all except most Recent Duplicated Object", default= [True, True, True], size=3)
+    
+    listDesc4 =  ["Offset Axis: X", "Offset Axis: Y", "Offset Axis: Z"]
+    
+    master_axis: bpy.props.EnumProperty(name="Iterate Object Axis Offset", items= [("X", "X", listDesc4[0]), ("Y", "Y", listDesc4[1]), ("Z", "Z", listDesc4[2])], description="Set Axis for Offset", default="X")
+    
+    master_offset: bpy.props.FloatProperty(name="Offset", description="Offset for Iterated Objects", default= 1.0)#, min=0)
+    
+    reset_offsets: bpy.props.BoolProperty(name="Reset Object Offsets", description="Resets Iterated Object Offsets when an Active Collection Changes. (If user doesn't want the Iterated objects)", default=False)
+    
+    #listDesc3 =  ["Hide in Viewport: Temporarily hide in viewport", "Disable in Renders: Globally disable in Renders", "Disable in Viewports: Globally disable in Viewports"]
+    
+    #hide_types: bpy.props.EnumProperty(name="Iterate Object Hide Types", items= [("HIDE_SET", "hide_set", listDesc3[0], "HIDE_OFF", 0), ("HIDE_RENDER", "hide_render", listDesc3[1], "RESTRICT_RENDER_OFF", 1), ("HIDE_VIEWPORT", "hide_viewport", listDesc3[2], "RESTRICT_VIEW_OFF", 2)], description="Toggle Hidden Types of all except most Recent Duplicated Object", default="DESCENDING")
     
     #list_order: "DUPLICATES" "RECENT" "CUSTOM"
     #list_reverse: "DESCENDING" "ASCENDING"
@@ -920,6 +1167,8 @@ classes = (
     ITERATE_MODEL_OT_SelectCollection,
     ITERATE_MODEL_OT_GroupOperators,
     ITERATE_MODEL_OT_Duplicate,
+    ITERATE_MODEL_OT_ToggleHideExRecent,
+    ITERATE_MODEL_OT_OffsetCollection,
     ITERATE_MODEL_OT_Debugging,
     ITERATE_MODEL_OT_UIOperators,
     
@@ -928,7 +1177,8 @@ classes = (
     ITERATE_MODEL_MT_CollectionsMenuActive,
     
     ITERATE_MODEL_PT_CustomPanel1,
-    ITERATE_MODEL_PT_ListDisplayMenu2,
+    ITERATE_MODEL_PT_IterationCollectionSettings,
+    ITERATE_MODEL_PT_DisplaySettings,
     
     ITERATE_MODEL_PreferencesMenu,
     ITERATE_MODEL_CollectionObjects,
