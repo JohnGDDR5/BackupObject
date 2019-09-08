@@ -453,7 +453,24 @@ class ITERATE_MODEL_OT_OffsetCollection(bpy.types.Operator):
             for i in enumerate(bpy.context.scene.IM_Props.collections):
                 if i[1].collection.hide_viewport == False:
                     viewportCollections.append(i[1])
-                
+                    
+                    #if i[1].axis != props.master_axis:
+                    #for j in enumerate(i[1].collection.objects):
+                    
+                    for j in enumerate(i[1].collection.objects):
+                        #Unhides object
+                        j[1].hide_set(False)
+                        j[1].hide_viewport = False
+                        
+                        j[1].location[findAxis(i[1].axis)] -= j[0] * i[1].offset#(i[1].offset + 1)
+                        
+                        j[1].location[axis] += j[0] * props.master_offset #(props.master_offset + 1)#(props.master_offset - i[1].offset)
+                        
+                    #Sets IM_Props.collections's offset same as master_offset
+                    i[1].offset = props.master_offset
+                    i[1].axis = props.master_axis
+                    
+            """
             #Iterates through every collection inside viewportCollections
             for i in enumerate(viewportCollections):
                 for j in enumerate(i[1].collection.objects):
@@ -461,41 +478,9 @@ class ITERATE_MODEL_OT_OffsetCollection(bpy.types.Operator):
                     j[1].hide_set(False)
                     j[1].hide_viewport = False
                     
-                    j[1].location[axis] += j[0] * props.master_offset 
+                    j[1].location[axis] += j[0] * props.master_offset """
                     
-                """
-                lastObject = len(i[1].objects)-1
                 
-                #If there is at least one object in a collection
-                if len(i[1].objects) > 0:
-                    #Every object, except the last(most recent) one
-                    for j in enumerate(i[1].objects[0:-1]):
-                        #Temporarily hides in the viewport
-                        j[1].hide_set(self.state)
-                        #Hides object from rendering
-                        j[1].hide_render = self.state
-                        #Hides object from viewport
-                        j[1].hide_viewport = self.state
-                        
-                #Last Object
-                #If hide_types' Booleans are True, the Last Object's hidden stays Off. Else, they can be toggle on or off by the opeartor
-                if props.hide_types[0] == True:
-                    i[1].objects[lastObject].hide_set(False)
-                else:
-                    i[1].objects[lastObject].hide_set(self.state)
-                    
-                if props.hide_types[1] == True:
-                    i[1].objects[lastObject].hide_render = False
-                else:
-                    i[1].objects[lastObject].hide_render = self.state
-                    
-                if props.hide_types[2] == True:
-                    i[1].objects[lastObject].hide_viewport = False
-                else:
-                    i[1].objects[lastObject].hide_viewport = self.state
-                #i[1].objects[lastObject].hide_render = not props.hide_types[1]
-                #i[1].objects[lastObject].hide_viewport = not props.hide_types[2]
-                """
                         
         self.type == "DEFAULT"
         
@@ -1114,7 +1099,8 @@ class ITERATE_MODEL_CollectionObjects(bpy.types.PropertyGroup):
     recent: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     custom: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     icon: bpy.props.StringProperty(name="Icon name for object", description="Used to display in the list", default="NONE")#, get=)#, update=checkIcon)
-    offset: bpy.props.FloatProperty(name="Offset", description="Offset for Iterated Objects", default= 1.0)
+    offset: bpy.props.FloatProperty(name="Offset", description="Offset for Iterated Objects", default= 0.0)
+    axis: bpy.props.EnumProperty(name="Object Axis Offset", items= [("X", "X", "X Axis"), ("Y", "Y", "Y Axis"), ("Z", "Z", "Z Axis")], default="X")
     
 class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     collection_parent: bpy.props.PointerProperty(name="Collection to add Groups to", type=bpy.types.Collection, update=printBruh, poll=pollBruh)
