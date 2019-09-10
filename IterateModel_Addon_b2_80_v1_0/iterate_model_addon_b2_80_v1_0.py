@@ -319,42 +319,32 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                             #Doesn't Hide object from rendering
                             #y[1].hide_viewport = True
                             pass
-                            
-                        for y in enumerate(reversed(existingCol.collection.objects[0:-1])):
-                            
-                            #if existingCol.offset == props.master_offset:
-                            #    y[1].location[axis] += props.master_offset#(y[0]+1) * props.master_offset
-                            #else:
-                            if existingCol.axis == props.master_axis:
+                        
+                        #If the IM_Props.collection.axis is the same as master_axis
+                        if existingCol.axis == props.master_axis:
+                            for y in enumerate(reversed(existingCol.collection.objects[0:-1])):
                                 y[1].location[axis] += (y[0] * (props.master_offset - existingCol.offset)) + props.master_offset
-                            else:
+                        else:
+                            for y in enumerate(reversed(existingCol.collection.objects[0:-1])):
                                 print("Object: %s" % (y[1].name))
-                                #y[1].location[findAxis(existingCol.axis)] += (y[0] * (props.master_offset - existingCol.offset)) - props.master_offset
+                                
+                                #Moves all objects in collection Backwards to 0 in collection's axis
                                 y[1].location[findAxis(existingCol.axis)] -= (y[0] * existingCol.offset)
                                 print("Location[%d]: [%f]" % (findAxis(existingCol.axis), y[1].location[findAxis(existingCol.axis)]))
                                 
-                                #y[1].location[axis] += (y[0] * (props.master_offset - existingCol.offset)) + props.master_offset
-                                y[1].location[axis] += ((y[0]+1) * (props.master_offset))# + props.master_offset
+                                #Moves all objects forward with Master_offset & on the Master_Axis
+                                y[1].location[axis] += ((y[0]+1) * (props.master_offset))
                                 print("Location[%d]: [%f] %f" % (axis, y[1].location[axis],(y[0] * existingCol.offset)))
-                            #y[1].location[axis] += props.master_offset
-                            #print("Object[%d]" % (y[0]))
-                            #print("Axis[%s, %s]" % (existingCol.axis, props.master_axis))
-                            #print("Location[%f, %f]" % ((y[0]+1) * existingCol.offset, (y[0]+1) * props.master_offset))
-                            #print("Offset: [%f, %f]" % (existingCol.offset, props.master_offset))
                             
-                            print("Axis: %s , [%d]" % (existingCol.axis, findAxis(existingCol.axis)))
+                        print("Axis: %s , [%d]" % (existingCol.axis, findAxis(existingCol.axis)))
                     
                         #Sets props.collection's .offset & .axis as IM_Props's masters
-                        #j[1].offset = props.master_offset
-                        #j[1].axis = props.master_axis
                         print("Master Axis: %s" % (props.master_axis))
                         print("Master Offset: %s" % (props.master_offset))
                         existingCol.offset = props.master_offset
                         existingCol.axis = props.master_axis
                         print("-"*5)
                     
-                    #lastOb = i
-                    #if props.hide_types[0] == True:
                     #Doesn't Temporarily hides in the viewport
                     ob.hide_set(not props.hide_types[0])
                     #Doesn't Hide object from rendering
@@ -366,12 +356,6 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                     ob.select_set(False)
                     #Selects previously selected object
                     previous_selected[i[0]].select_set(True)
-                    
-                    """
-                    for k in enumerate(colNew.objects):
-                        k[1].location[findAxis(i[1].axis)] -= k[0] * i[1].offset#(i[1].offset + 1)
-                
-                        k[1].location[axis] += k[0] * props.master_offset """
                     
                 #selects previously active object
                 previous_active.select_set(True)
@@ -508,33 +492,45 @@ class ITERATE_MODEL_OT_OffsetCollection(bpy.types.Operator):
                     
                     for j in enumerate(i[1].collection.objects):
                         #Unhides object
-                        j[1].hide_set(False)
-                        j[1].hide_viewport = False
+                        #j[1].hide_set(False)
+                        #j[1].hide_viewport = False
                         
-                        j[1].lock_location[0] = True
-                        j[1].lock_location[1] = True
-                        j[1].lock_location[2] = True
+                        #j[1].lock_location[0] = True
+                        #j[1].lock_location[1] = True
+                        #j[1].lock_location[2] = True
+                        pass
                         
-                        #if j[1].location[findAxis(i[1].axis)] != j[1].location[findAxis(i[1].axis)] + (j[0] * i[1].offset):
-                        #    j[1].location[findAxis(i[1].axis)] += j[0] * i[1].offset
-                            
-                        j[1].location[findAxis(i[1].axis)] -= j[0] * i[1].offset#(i[1].offset + 1)
+                    if len(i[1].collection.objects) > 0:
+                        #Master Axis's index
+                        axis = findAxis(props.master_axis)
                         
-                        j[1].location[axis] += j[0] * props.master_offset #(props.master_offset + 1)#(props.master_offset - i[1].offset)
+                        #If the IM_Props.collection.axis is the same as master_axis
+                        if i[1].axis == props.master_axis:
+                            print("If : " + "-"*6)
+                            for y in enumerate(reversed(i[1].collection.objects[0:-1])):
+                                print("Object: %s" % (y[1].name))
+                                print("Location[%d]: [%f]" % (findAxis(i[1].axis), y[1].location[findAxis(i[1].axis)]))
+                                y[1].location[axis] += ((y[0]+1) * (props.master_offset - i[1].offset))# + props.master_offset
+                                
+                                print("Location[%d]: [%f]" % (findAxis(i[1].axis), y[1].location[findAxis(i[1].axis)]))
+                        else:
+                            print("Else : " + "-"*6)
+                            for y in enumerate(reversed(i[1].collection.objects[0:-1])):
+                                print("Object: %s" % (y[1].name))
+                                print("Location[%d]: [%f]" % (findAxis(i[1].axis), y[1].location[findAxis(i[1].axis)]))
+                                #Moves all objects in collection Backwards to 0 in collection's axis
+                                y[1].location[findAxis(i[1].axis)] -= ((y[0]+1) * i[1].offset)
+                                print("Location[%d]: [%f]" % (findAxis(i[1].axis), y[1].location[findAxis(i[1].axis)]))
+                                
+                                #Moves all objects forward with Master_offset & on the Master_Axis
+                                #y[1].location[axis] += ((y[0]+1) * (props.master_offset))
+                                y[1].location[axis] += ((y[0]+1) * (props.master_offset))
+                                print("Location[%d]: [%f] %f" % (axis, y[1].location[axis],(y[0] * i[1].offset)))
                         
                     #Sets IM_Props.collections's offset same as master_offset
                     i[1].offset = props.master_offset
                     i[1].axis = props.master_axis
-                    
-            """
-            #Iterates through every collection inside viewportCollections
-            for i in enumerate(viewportCollections):
-                for j in enumerate(i[1].collection.objects):
-                    #Unhides object
-                    j[1].hide_set(False)
-                    j[1].hide_viewport = False
-                    
-                    j[1].location[axis] += j[0] * props.master_offset """
+            
                     
                 
                         
