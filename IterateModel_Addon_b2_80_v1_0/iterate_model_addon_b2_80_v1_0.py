@@ -38,93 +38,6 @@ from bpy.props import *
 #import decimal
 #import copy
 
-
-class ITERATE_MODEL_OT_SelectCollection(bpy.types.Operator):
-    bl_idname = "iteratemodel.select_collection"
-    bl_label = "Select Collection"
-    bl_description = "Set collection as Parent or Active collection"
-    bl_options = {'UNDO',}
-    type: bpy.props.StringProperty(default="DEFAULT")
-    index: bpy.props.IntProperty(default=0, min=-1)
-    
-    def execute(self, context):
-        scene = bpy.context.scene
-        props = scene.IM_Props
-            
-        #Select a collection 
-        if self.type == "SELECT_PARENT":
-            if self.index >= 0:
-                props.collection_parent = bpy.data.collections[self.index] 
-            else:
-                props.collection_parent = bpy.context.scene.collection
-            
-            if props.collection_active is None:
-                colNew = bpy.data.collections.new(props.group_name)
-                #Links colNew to collection_active
-                props.collection_active = colNew
-                props.collection_parent.children.link(colNew)
-            else:
-                pass
-                
-        if self.type == "SELECT_ACTIVE":
-            props.collection_active = bpy.data.collections[self.index]
-            
-        self.type == "DEFAULT"
-        
-        return {'FINISHED'}
-
-class ITERATE_MODEL_OT_GroupOperators(bpy.types.Operator):
-    bl_idname = "iteratemodel.collection_ops"
-    bl_label = "IterateModel Duplicating Operators"
-    bl_description = "IterateModel Duplicating Operators"
-    bl_options = {'UNDO',}
-    type: bpy.props.StringProperty(default="DEFAULT")
-    index: bpy.props.IntProperty(default=0, min=0)
-    
-    def execute(self, context):
-        scene = bpy.context.scene
-        props = scene.IM_Props
-        
-        #New Collection Group inside Parent Collection and set as Active Collection
-        if self.type == "NEW_GROUP":
-            
-            colNew = bpy.data.collections.new(props.group_name)
-            #Links colNew2 to collection_parent
-            props.collection_active = colNew
-            
-            #If there is a specified Parent collection
-            if props.collection_parent is not None:
-                props.collection_parent.children.link(colNew)
-            #if collection_parent is None, link new Collection to Master Collection
-            else:
-                bpy.context.scene.collection.children.link(colNew)
-            
-            #Removes collections from all IM_Props.collections.collection
-            for i in enumerate(props.collections):
-                i[1].collection = None
-                i[1].duplicates = 0
-        
-        
-        #Create a new Collection Parent, link it to scene, and an Active Collection linked to Parent    
-        if self.type == "NEW_COLLECTION":
-            # Create a new collection and link it to the scene.
-            colNew = bpy.data.collections.new("Collection")
-            props.collection_parent = colNew
-            #Links new collection to Master Collection
-            scene.collection.children.link(colNew)
-            
-            #If collection active isn't none, make a new one for it, or don't change Active Collection
-            if props.collection_active is None:
-                #Creates new Group Collection
-                colNew2 = bpy.data.collections.new(props.group_name)
-                #Links colNew2 to collection_parent
-                props.collection_active = colNew2
-                props.collection_parent.children.link(colNew2)
-                
-        self.type == "DEFAULT"
-        
-        return {'FINISHED'}
-
 def objectIcon(object):
     scene = bpy.context.scene
     data = bpy.data
@@ -185,6 +98,103 @@ def findAxis(input):
         indexAxis = 2
         
     return indexAxis
+
+class ITERATE_MODEL_OT_SelectCollection(bpy.types.Operator):
+    bl_idname = "iteratemodel.select_collection"
+    bl_label = "Select Collection"
+    bl_description = "Set collection as Parent or Active collection"
+    bl_options = {'UNDO',}
+    type: bpy.props.StringProperty(default="DEFAULT")
+    index: bpy.props.IntProperty(default=0, min=-1)
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+            
+        #Select a collection 
+        if self.type == "SELECT_PARENT":
+            if self.index >= 0:
+                props.collection_parent = bpy.data.collections[self.index] 
+            else:
+                props.collection_parent = bpy.context.scene.collection
+            
+            if props.collection_active is None:
+                colNew = bpy.data.collections.new(props.group_name)
+                #Links colNew to collection_active
+                props.collection_active = colNew
+                props.collection_parent.children.link(colNew)
+            else:
+                pass
+                
+        if self.type == "SELECT_ACTIVE":
+            props.collection_active = bpy.data.collections[self.index]
+            
+        self.type == "DEFAULT"
+        
+        return {'FINISHED'}
+
+class ITERATE_MODEL_OT_GroupOperators(bpy.types.Operator):
+    bl_idname = "iteratemodel.collection_ops"
+    bl_label = "IterateModel Duplicating Operators"
+    bl_description = "IterateModel Duplicating Operators"
+    bl_options = {'UNDO',}
+    type: bpy.props.StringProperty(default="DEFAULT")
+    index: bpy.props.IntProperty(default=0, min=0)
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+        
+        #New Collection Group inside Parent Collection and set as Active Collection
+        if self.type == "NEW_GROUP":
+            
+            if props.reset_offsets == True:
+                for i in enumerate(bpy.context.scene.IM_Props.collections):
+                    if len(i[1].collection.objects) > 0:
+                        axis = findAxis(i[1].axis)
+                        for y in enumerate(reversed(i[1].collection.objects[0:-1])):
+                            print("Object: %s" % (y[1].name))
+                            print("Location[%d]: [%f]" % (axis, y[1].location[axis]))
+                            y[1].location[axis] -= ((y[0]+1) * i[1].offset)#(props.master_offset - i[1].offset))# + props.master_offset
+                            
+                            print("Location[%d]: [%f]" % (axis, y[1].location[axis]))
+            
+            colNew = bpy.data.collections.new(props.group_name)
+            #Links colNew2 to collection_parent
+            props.collection_active = colNew
+            
+            #If there is a Parent collection, link colNew to it
+            if props.collection_parent is not None:
+                props.collection_parent.children.link(colNew)
+            #if collection_parent is None, link new Collection to Master Collection
+            else:
+                bpy.context.scene.collection.children.link(colNew)
+            
+            #Removes collections from all IM_Props.collections.collection
+            for i in enumerate(props.collections):
+                i[1].collection = None
+                i[1].duplicates = 0
+        
+        
+        #Create a new Collection Parent, link it to scene, and an Active Collection linked to Parent    
+        if self.type == "NEW_COLLECTION":
+            # Create a new collection and link it to the scene.
+            colNew = bpy.data.collections.new("Collection")
+            props.collection_parent = colNew
+            #Links new collection to Master Collection
+            scene.collection.children.link(colNew)
+            
+            #If collection active isn't none, make a new one for it, or don't change Active Collection
+            if props.collection_active is None:
+                #Creates new Group Collection
+                colNew2 = bpy.data.collections.new(props.group_name)
+                #Links colNew2 to collection_parent
+                props.collection_active = colNew2
+                props.collection_parent.children.link(colNew2)
+                
+        self.type == "DEFAULT"
+        
+        return {'FINISHED'}
         
 class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
     bl_idname = "iteratemodel.duplicating_ops"
@@ -309,7 +319,11 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                     #if props.hide_objects == True:
                     #Checks if there is more than one object in collection
                     if len(existingCol.collection.objects) > 0:
-                        axis = findAxis(props.master_axis)
+                        #Master Axis's index
+                        master_axis = findAxis(props.master_axis)
+                        #IM_Props.collection.axis's 
+                        axis_1 = findAxis(existingCol.axis)
+                        
                         #Goes through all object's except the most recent/last one added
                         for y in enumerate(existingCol.collection.objects[0:-1]):
                             #Temporarily hides in the viewport
@@ -323,18 +337,18 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                         #If the IM_Props.collection.axis is the same as master_axis
                         if existingCol.axis == props.master_axis:
                             for y in enumerate(reversed(existingCol.collection.objects[0:-1])):
-                                y[1].location[axis] += (y[0] * (props.master_offset - existingCol.offset)) + props.master_offset
+                                y[1].location[master_axis] += (y[0] * (props.master_offset - existingCol.offset)) + props.master_offset
                         else:
                             for y in enumerate(reversed(existingCol.collection.objects[0:-1])):
                                 print("Object: %s" % (y[1].name))
                                 
                                 #Moves all objects in collection Backwards to 0 in collection's axis
-                                y[1].location[findAxis(existingCol.axis)] -= (y[0] * existingCol.offset)
-                                print("Location[%d]: [%f]" % (findAxis(existingCol.axis), y[1].location[findAxis(existingCol.axis)]))
+                                y[1].location[axis_1] -= (y[0] * existingCol.offset)
+                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
                                 
                                 #Moves all objects forward with Master_offset & on the Master_Axis
-                                y[1].location[axis] += ((y[0]+1) * (props.master_offset))
-                                print("Location[%d]: [%f] %f" % (axis, y[1].location[axis],(y[0] * existingCol.offset)))
+                                y[1].location[master_axis] += ((y[0]+1) * (props.master_offset))
+                                print("Location[%d]: [%f] %f" % (master_axis, y[1].location[master_axis],(y[0] * existingCol.offset)))
                             
                         print("Axis: %s , [%d]" % (existingCol.axis, findAxis(existingCol.axis)))
                     
@@ -502,30 +516,32 @@ class ITERATE_MODEL_OT_OffsetCollection(bpy.types.Operator):
                         
                     if len(i[1].collection.objects) > 0:
                         #Master Axis's index
-                        axis = findAxis(props.master_axis)
+                        master_axis = findAxis(props.master_axis)
+                        #IM_Props.collection.axis's 
+                        axis_1 = findAxis(i[1].axis)
                         
                         #If the IM_Props.collection.axis is the same as master_axis
                         if i[1].axis == props.master_axis:
                             print("If : " + "-"*6)
                             for y in enumerate(reversed(i[1].collection.objects[0:-1])):
                                 print("Object: %s" % (y[1].name))
-                                print("Location[%d]: [%f]" % (findAxis(i[1].axis), y[1].location[findAxis(i[1].axis)]))
-                                y[1].location[axis] += ((y[0]+1) * (props.master_offset - i[1].offset))# + props.master_offset
+                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
+                                y[1].location[master_axis] += ((y[0]+1) * (props.master_offset - i[1].offset))# + props.master_offset
                                 
-                                print("Location[%d]: [%f]" % (findAxis(i[1].axis), y[1].location[findAxis(i[1].axis)]))
+                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
                         else:
                             print("Else : " + "-"*6)
                             for y in enumerate(reversed(i[1].collection.objects[0:-1])):
                                 print("Object: %s" % (y[1].name))
-                                print("Location[%d]: [%f]" % (findAxis(i[1].axis), y[1].location[findAxis(i[1].axis)]))
+                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
                                 #Moves all objects in collection Backwards to 0 in collection's axis
-                                y[1].location[findAxis(i[1].axis)] -= ((y[0]+1) * i[1].offset)
-                                print("Location[%d]: [%f]" % (findAxis(i[1].axis), y[1].location[findAxis(i[1].axis)]))
+                                y[1].location[axis_1] -= ((y[0]+1) * i[1].offset)
+                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
                                 
                                 #Moves all objects forward with Master_offset & on the Master_Axis
-                                #y[1].location[axis] += ((y[0]+1) * (props.master_offset))
-                                y[1].location[axis] += ((y[0]+1) * (props.master_offset))
-                                print("Location[%d]: [%f] %f" % (axis, y[1].location[axis],(y[0] * i[1].offset)))
+                                #y[1].location[master_axis] += ((y[0]+1) * (props.master_offset))
+                                y[1].location[master_axis] += ((y[0]+1) * (props.master_offset))
+                                print("Location[%d]: [%f] %f" % (master_axis, y[1].location[master_axis],(y[0] * i[1].offset)))
                         
                     #Sets IM_Props.collections's offset same as master_offset
                     i[1].offset = props.master_offset
@@ -925,7 +941,7 @@ class ITERATE_MODEL_PT_IterationCollectionSettings(bpy.types.Panel):
         col = layout.column()
         
         row = col.row(align=True)
-        row.label(text="Toggle Hide All")
+        row.label(text="Toggle")
         
         #row = col.row(align=True)
         
@@ -933,7 +949,7 @@ class ITERATE_MODEL_PT_IterationCollectionSettings(bpy.types.Panel):
         #col = split.row(align=False)
         
         #row = col.row(align=False)
-        split.operator("iteratemodel.toggle_hide_ex_recent", text="Toggle Hide All")
+        split.operator("iteratemodel.toggle_hide_ex_recent", text="Hide All")
         
         row = split.row(align=True)
         #row = col.row(align=True)
@@ -1184,6 +1200,8 @@ class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     hide_objects: bpy.props.BoolProperty(name="Hide All Except Recent Objects", description="Hides All Iterated objects, execpt the most recent. (For easy viewing of most recent duplicated objects)", default=False)
     
     hide_types: bpy.props.BoolVectorProperty(name="Iterate Object Hide Types", description="Toggle Hidden Types of all except most Recent Duplicated Object", default= [True, True, True], size=3)
+    
+    hide_types_last: bpy.props.BoolVectorProperty(name="Iterate Object Hide Types", description="Toggle Hidden Types of all except most Recent Duplicated Object", default= [True, True, True], size=3)
     
     listDesc4 =  ["Offset Axis: X", "Offset Axis: Y", "Offset Axis: Z"]
     
