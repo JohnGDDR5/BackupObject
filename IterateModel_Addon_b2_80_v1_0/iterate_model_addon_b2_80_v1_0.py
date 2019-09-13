@@ -268,13 +268,14 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                                 colNew.hide_viewport = True
                                 
                                 props.collection_active.children.link(colNew)
-                                
-                            """
-                            for k in enumerate(colNew.objects):
-                                k[1].location[findAxis(i[1].axis)] -= k[0] * i[1].offset#(i[1].offset + 1)
-                        
-                                k[1].location[axis] += k[0] * props.master_offset """
-                                
+                            #bpy.context.object.name    
+                            #print("1".zfill(3))
+                            
+                            #Start of Object Name Change Code
+                            
+                            #for k in j[1].collection.objects
+                            
+                            #End of Object Name Change Code
                             
                             #Links duplicated object to existing collection
                             j[1].collection.objects.link(ob)
@@ -321,16 +322,6 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                         master_axis = findAxis(props.master_axis)
                         #IM_Props.collection.axis's 
                         axis_1 = findAxis(existingCol.axis)
-                        
-                        #Goes through all object's except the most recent/last one added
-                        for y in enumerate(existingCol.collection.objects[0:-1]):
-                            #Temporarily hides in the viewport
-                            #y[1].hide_set(True)
-                            #Hides object from rendering
-                            #y[1].hide_render = True
-                            #Doesn't Hide object from rendering
-                            #y[1].hide_viewport = True
-                            pass
                         
                         #If the IM_Props.collection.axis is the same as master_axis
                         if existingCol.axis == props.master_axis:
@@ -384,6 +375,208 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
             ListOrderUpdate(self, context)
                         
         self.type == "DEFAULT"
+        
+        return {'FINISHED'}
+
+class ITERATE_MODEL_OT_OffsetCollection(bpy.types.Operator):
+    bl_idname = "iteratemodel.offset_collection"
+    bl_label = "Toggles Hide Except Recent"
+    bl_description = "Toggles Hide All Except Recent Iteration"
+    bl_options = {'UNDO',}
+    
+    state: bpy.props.BoolProperty(default=True)
+    type: bpy.props.StringProperty(default="DEFAULT")
+    index: bpy.props.IntProperty(default=0, min=0)
+    
+    @classmethod
+    def poll(cls, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+        
+        #return props.collection_parent is not None and props.collection_active is not None
+        return props.collection_active is not None
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+        #inputs = context.preferences.inputs
+        #bpy.context.preferences.inputs.view_rotate_method
+        
+        #props.master_axis
+        #props.master_offset
+        
+        if self.type == "DEFAULT":
+            
+            #if props.collection_parent is not None:
+            axis = findAxis(props.master_axis)
+            #Collections that are Viewable
+            viewportCollections = []
+            
+            #Appends all viewable collections from IM_Props.collections to viewportCollections
+            for i in enumerate(bpy.context.scene.IM_Props.collections):
+                if i[1].collection.hide_viewport == False:
+                    viewportCollections.append(i[1])
+                        
+                    if len(i[1].collection.objects) > 0:
+                        #Master Axis's index
+                        master_axis = findAxis(props.master_axis)
+                        #IM_Props.collection.axis's 
+                        axis_1 = findAxis(i[1].axis)
+                        
+                        #If the IM_Props.collection.axis is the same as master_axis
+                        if i[1].axis == props.master_axis:
+                            print("If : " + "-"*6)
+                            for y in enumerate(reversed(i[1].collection.objects[0:-1])):
+                                print("Object: %s" % (y[1].name))
+                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
+                                y[1].location[master_axis] += ((y[0]+1) * (props.master_offset - i[1].offset))# + props.master_offset
+                                
+                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
+                        else:
+                            print("Else : " + "-"*6)
+                            for y in enumerate(reversed(i[1].collection.objects[0:-1])):
+                                print("Object: %s" % (y[1].name))
+                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
+                                #Moves all objects in collection Backwards to 0 in collection's axis
+                                y[1].location[axis_1] -= ((y[0]+1) * i[1].offset)
+                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
+                                
+                                #Moves all objects forward with Master_offset & on the Master_Axis
+                                #y[1].location[master_axis] += ((y[0]+1) * (props.master_offset))
+                                y[1].location[master_axis] += ((y[0]+1) * (props.master_offset))
+                                print("Location[%d]: [%f] %f" % (master_axis, y[1].location[master_axis],(y[0] * i[1].offset)))
+                        
+                    #Sets IM_Props.collections's offset same as master_offset
+                    i[1].offset = props.master_offset
+                    i[1].axis = props.master_axis
+            
+        self.type == "DEFAULT"
+        
+        #Changes the state the operator hides and unhides properties, True or False
+        if self.state == True:
+            self.state = False
+        else:
+            self.state = True
+        
+        return {'FINISHED'}
+        
+class ITERATE_MODEL_OT_OffsetUse(bpy.types.Operator):
+    bl_idname = "iteratemodel.offset_use_object"
+    bl_label = "Toggles Hide Except Recent"
+    bl_description = "Toggles Hide All Except Recent Iteration"
+    bl_options = {'UNDO',}
+    
+    state: bpy.props.BoolProperty(default=True)
+    type: bpy.props.StringProperty(default="DEFAULT")
+    index: bpy.props.IntProperty(default=0, min=0)
+    
+    @classmethod
+    def poll(cls, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+        
+        #return props.collection_parent is not None and props.collection_active is not None
+        return props.collection_active is not None
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+        #inputs = context.preferences.inputs
+        #bpy.context.preferences.inputs.view_rotate_method
+        
+        #props.master_axis
+        #props.master_offset
+        
+        if self.type == "DEFAULT":
+            #If there is at least 1 object selected
+            if len(bpy.context.selected_objects) > 0:
+                #if props.collection_parent is not None:
+                axis = findAxis(props.master_axis)
+                #Collections that are Viewable
+                nonIterationObjects = []
+                
+                previous_active = bpy.context.active_object
+                
+                previous_selected = bpy.context.selected_objects
+                
+                new_active = None
+                
+                new_objects = []
+                
+                #Unselects the objects
+                for i in enumerate(previous_selected):
+                    i[1].select_set(False)
+                    
+                #Sets Active Object to None
+                bpy.context.view_layer.objects.active = None
+                
+                for i in enumerate(previous_selected):
+                    iterated = False
+                    for j in enumerate(bpy.context.scene.IM_Props.collections):
+                        for c in enumerate(i[1].users_collection):
+                            #if i[1].users_collection[c[1]] == j[1].collection:
+                            if c[1] == j[1].collection:
+                                #IM_Props.collection.axis's 
+                                axis_1 = findAxis(j[1].axis)
+                                
+                                index1 = None
+                                
+                                for k in enumerate(reversed(j[1].collection.objects)):
+                                    if k[1] == i[1]:
+                                        index1 = k[0]
+                                        iterated = True
+                                        break
+                                        
+                                if index1 != None:
+                                    i[1].select_set(True)
+                                    
+                                    bpy.context.view_layer.objects.active = i[1]
+                                    
+                                    #Duplicates selected objects in previous_selected
+                                    bpy.ops.object.duplicate_move(OBJECT_OT_duplicate={"linked":False, "mode":'TRANSLATION'}, TRANSFORM_OT_translate={"value":(0.0, 0.0, 0.0), "orient_type":'GLOBAL'})
+                                    
+                                    ob = bpy.context.object
+                                    print("Duplicated Object: "+str(ob.name))
+                                    new_objects.append(ob)
+                                    
+                                    #If new object's duplicate origin object was the previously active
+                                    if i[1] == previous_active:
+                                        new_active = ob
+                                        
+                                    #Unlinks duplicated Object inside the collection
+                                    j[1].collection.objects.unlink(ob)
+                                    
+                                    #Links duplicated object into collection_active
+                                    props.collection_active.objects.link(ob)
+                                    
+                                    #Moves Object Backwards
+                                    ob.location[axis_1] -= index1 * j[1].offset
+                                    
+                                    i[1].select_set(False)
+                                break
+                    #If object wasn't found inside Iteration Collections
+                    if iterated == False:
+                        nonIterationObjects.append(i[1].name)
+                        
+                #Reselects the previously selected objects
+                for i in enumerate(new_objects):
+                    i[1].select_set(True)
+                    
+                #Sets Active Object to None
+                bpy.context.view_layer.objects.active = new_active
+                    
+                if len(nonIterationObjects) > 0:
+                    print("Objects not inside Iteration Collections: "+str(nonIterationObjects))
+                    reportString = "Moved %d/%d Iterations to Original Location. %d Objects not in Iteration Collections" % (len(previous_selected)-len(nonIterationObjects), len(previous_selected), len(nonIterationObjects))
+                else:
+                    reportString = "Moved %d/%d Iterations to Original Location." % (len(previous_selected), len(previous_selected))
+            else:
+                reportString = "No Objects Selected"
+                
+            
+        self.type == "DEFAULT"
+        
+        self.report({'INFO'}, reportString)
         
         return {'FINISHED'}
         
@@ -499,104 +692,6 @@ class ITERATE_MODEL_OT_ToggleHideCollections(bpy.types.Operator):
                         
                     #Note: As of right now, I need a more complicated solution to be able to toggle the temporary Viewport Visibility [0] "Eye Icon" using python
                     
-        self.type == "DEFAULT"
-        
-        #Changes the state the operator hides and unhides properties, True or False
-        if self.state == True:
-            self.state = False
-        else:
-            self.state = True
-        
-        return {'FINISHED'}
-        
-class ITERATE_MODEL_OT_OffsetCollection(bpy.types.Operator):
-    bl_idname = "iteratemodel.offset_collection"
-    bl_label = "Toggles Hide Except Recent"
-    bl_description = "Toggles Hide All Except Recent Iteration"
-    bl_options = {'UNDO',}
-    
-    state: bpy.props.BoolProperty(default=True)
-    type: bpy.props.StringProperty(default="DEFAULT")
-    index: bpy.props.IntProperty(default=0, min=0)
-    
-    @classmethod
-    def poll(cls, context):
-        scene = bpy.context.scene
-        props = scene.IM_Props
-        
-        #return props.collection_parent is not None and props.collection_active is not None
-        return props.collection_active is not None
-    
-    def execute(self, context):
-        scene = bpy.context.scene
-        props = scene.IM_Props
-        #inputs = context.preferences.inputs
-        #bpy.context.preferences.inputs.view_rotate_method
-        
-        #props.master_axis
-        #props.master_offset
-        
-        if self.type == "DEFAULT":
-            
-            #if props.collection_parent is not None:
-            axis = findAxis(props.master_axis)
-            #Collections that are Viewable
-            viewportCollections = []
-            
-            #Appends all viewable collections from IM_Props.collections to viewportCollections
-            for i in enumerate(bpy.context.scene.IM_Props.collections):
-                if i[1].collection.hide_viewport == False:
-                    viewportCollections.append(i[1])
-                    
-                    #if i[1].axis != props.master_axis:
-                    #for j in enumerate(i[1].collection.objects):
-                    
-                    for j in enumerate(i[1].collection.objects):
-                        #Unhides object
-                        #j[1].hide_set(False)
-                        #j[1].hide_viewport = False
-                        
-                        #j[1].lock_location[0] = True
-                        #j[1].lock_location[1] = True
-                        #j[1].lock_location[2] = True
-                        pass
-                        
-                    if len(i[1].collection.objects) > 0:
-                        #Master Axis's index
-                        master_axis = findAxis(props.master_axis)
-                        #IM_Props.collection.axis's 
-                        axis_1 = findAxis(i[1].axis)
-                        
-                        #If the IM_Props.collection.axis is the same as master_axis
-                        if i[1].axis == props.master_axis:
-                            print("If : " + "-"*6)
-                            for y in enumerate(reversed(i[1].collection.objects[0:-1])):
-                                print("Object: %s" % (y[1].name))
-                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
-                                y[1].location[master_axis] += ((y[0]+1) * (props.master_offset - i[1].offset))# + props.master_offset
-                                
-                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
-                        else:
-                            print("Else : " + "-"*6)
-                            for y in enumerate(reversed(i[1].collection.objects[0:-1])):
-                                print("Object: %s" % (y[1].name))
-                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
-                                #Moves all objects in collection Backwards to 0 in collection's axis
-                                y[1].location[axis_1] -= ((y[0]+1) * i[1].offset)
-                                print("Location[%d]: [%f]" % (axis_1, y[1].location[axis_1]))
-                                
-                                #Moves all objects forward with Master_offset & on the Master_Axis
-                                #y[1].location[master_axis] += ((y[0]+1) * (props.master_offset))
-                                y[1].location[master_axis] += ((y[0]+1) * (props.master_offset))
-                                print("Location[%d]: [%f] %f" % (master_axis, y[1].location[master_axis],(y[0] * i[1].offset)))
-                        
-                    #Sets IM_Props.collections's offset same as master_offset
-                    i[1].offset = props.master_offset
-                    i[1].axis = props.master_axis
-            
-                    
-                
-                        
         self.type == "DEFAULT"
         
         #Changes the state the operator hides and unhides properties, True or False
@@ -1036,6 +1131,9 @@ class ITERATE_MODEL_PT_IterationCollectionSettings(bpy.types.Panel):
         row.label(text="Offset Axis")
         row.prop(props, "master_axis", text="", icon="EMPTY_AXIS")#, expand=True)
         
+        row = col.row(align=True)
+        row.operator("iteratemodel.offset_use_object", text="Select Move Iteration")
+        
         col.separator()
         
         row = col.row(align=True)
@@ -1286,9 +1384,11 @@ classes = (
     ITERATE_MODEL_OT_SelectCollection,
     ITERATE_MODEL_OT_GroupOperators,
     ITERATE_MODEL_OT_Duplicate,
+    ITERATE_MODEL_OT_OffsetCollection,
+    ITERATE_MODEL_OT_OffsetUse,
+    
     ITERATE_MODEL_OT_ToggleHideObjects,
     ITERATE_MODEL_OT_ToggleHideCollections,
-    ITERATE_MODEL_OT_OffsetCollection,
     ITERATE_MODEL_OT_Debugging,
     ITERATE_MODEL_OT_UIOperators,
     
