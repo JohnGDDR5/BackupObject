@@ -173,7 +173,7 @@ class ITERATE_MODEL_OT_GroupOperators(bpy.types.Operator):
             #Removes collections from all IM_Props.collections.collection
             for i in enumerate(props.collections):
                 i[1].collection = None
-                i[1].duplicates = 0
+                #i[1].duplicates = 0
         
         
         #Create a new Collection Parent, link it to scene, and an Active Collection linked to Parent    
@@ -268,18 +268,10 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                                 colNew.hide_viewport = True
                                 
                                 props.collection_active.children.link(colNew)
-                            #bpy.context.object.name    
-                            #print("1".zfill(3))
-                            
-                            #Start of Object Name Change Code
-                            
-                            #for k in j[1].collection.objects
-                            
-                            #End of Object Name Change Code
                             
                             #Links duplicated object to existing collection
                             j[1].collection.objects.link(ob)
-                            j[1].duplicates += 1
+                            #j[1].duplicates += 1
                             j[1].name = j[1].collection.name
                             
                             print("For: 1")
@@ -300,7 +292,7 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                         propsCol = props.collections.add()
                         propsCol.collection = colNew2
                         propsCol.object = i[1]#i[1]#bpy.context.selected_objects[existinOb]
-                        propsCol.duplicates += 1
+                        #propsCol.duplicates += 1
                         #Makes the name of 
                         propsCol.name = colNew2.name
                         #Adds the index of the order of created
@@ -841,7 +833,40 @@ class ITERATE_MODEL_OT_UIOperators(bpy.types.Operator):
         
         return {'FINISHED'}
 
+def updateValues(context):
+    props = bpy.context.scene.IM_Props
+    
+    IMCollect = props.collections
+    
+    #if len_original != 0:
+    if props.collections != None:
+        #New Length to subtract from i to get the new index of i
+        #len_sub = len(props.collections)
+        len_original = len(props.collections)
+        
+        for i in enumerate(props.collections):
+            
+            if i[1].object != None:
+                #bpy.context.scene.IM_Props.collections[0].collection.objects
+                
+            
+                if i[1].collection != None:
+                    #i[1].duplicates = len(i[1].collection.objects)
+                    pass
+            else:
+                new_index = i[0] - (len(props.collections)-i[0])
+                props.collections.remove(new_index+1)
+                pass
+    else:
+        print("Bruh 1")
+        
+    return None
+            
+        
+
 class ITERATE_MODEL_UL_items(bpy.types.UIList):
+    #updateValues(bpy.context.scene)
+    
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         scene = bpy.context.scene
         data = bpy.data
@@ -852,8 +877,17 @@ class ITERATE_MODEL_UL_items(bpy.types.UIList):
         
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             row = layout.row(align=True)
-            info = '%d. %s: %d' % (index, item.object.name, item.duplicates)
+            
+            #len(bpy.context.scene.IM_Props.collections[0].collection.objects)
+            
+            #item.duplicates = len(item.collection.objects)
+            #updateValues(bpy.context.scene)
+            
+            
             if len(IMCollect) > 0:
+                #info = '%d. %s: %d' % (index, item.object.name, item.duplicates)
+                info = '%d. %s: %d' % (index, item.object.name)#, item.duplicates)
+                
                 #Displays icon of objects in list
                 if props.display_icons == True:
                     
@@ -861,7 +895,7 @@ class ITERATE_MODEL_UL_items(bpy.types.UIList):
                         row.label(text="", icon=item.icon)
                     else:
                         obIcon = objectIcon(item.object)
-                        row.label(text="", icon=obIcon) 
+                        #row.label(text="", icon=obIcon) 
                     
                 row.label(text=info)#, icon="OUTLINER_OB_MESH")
                 #"OUTLINER_OB_MESH" for mesh, "OUTLINER_OB_IMAGE" for empty
@@ -966,7 +1000,6 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         
         #active = props.RIA_ULIndex
         #riaCollect = scene.RIA_Collections
-        
         #global aspect_ratios#, active
         #active = props.RIA_ULIndex
         #riaCollect = scene.RIA_Collections
@@ -1232,7 +1265,7 @@ def ListOrderUpdate(self, context):
     def returnOrder(a):
         #value = None
         if props.list_order == "DUPLICATES":
-            return a.duplicates
+            return len(a.collection.objects)#a.duplicates
         if props.list_order == "RECENT":
             return a.recent
         if props.list_order == "CUSTOM":
@@ -1326,8 +1359,11 @@ class ITERATE_MODEL_CollectionObjects(bpy.types.PropertyGroup):
     recent: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     custom: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     icon: bpy.props.StringProperty(name="Icon name for object", description="Used to display in the list", default="NONE")#, get=)#, update=checkIcon)
+    
     offset: bpy.props.FloatProperty(name="Offset", description="Offset for Iterated Objects", default= 0.0)
     axis: bpy.props.EnumProperty(name="Object Axis Offset", items= [("X", "X", "X Axis"), ("Y", "Y", "Y Axis"), ("Z", "Z", "Z Axis")], default="X")
+    
+    index_offset: bpy.props.IntProperty(name="Offset", description="Offset for Iterated Objects", default= 0)
     
 class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     collection_parent: bpy.props.PointerProperty(name="Collection to add Groups to", type=bpy.types.Collection, update=printBruh, poll=pollBruh)
@@ -1371,6 +1407,8 @@ class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     master_offset: bpy.props.FloatProperty(name="Offset", description="Offset for Iterated Objects", default= 1.0)#, min=0)
     
     reset_offsets: bpy.props.BoolProperty(name="Reset Object Offsets", description="Resets Iterated Object Offsets when an Active Collection Changes. (If user doesn't want the Iterated objects)", default=False)
+    
+    master_index_offset: bpy.props.IntProperty(name="Offset", description="Offset for Iterated Objects", default= 0)#, min=0)
     
     #listDesc3 =  ["Hide in Viewport: Temporarily hide in viewport", "Disable in Renders: Globally disable in Renders", "Disable in Viewports: Globally disable in Viewports"]
     
