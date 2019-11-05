@@ -1,6 +1,8 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
-# Iterate Model is an addon for creating duplicates of objects and having them sorted by most recent. A kind of version-control system.
+# Iterate Objects is a workflow addon for easily creating duplicates of objects you're working on and sending them to a unique collection. 
+# A kind of version-control system where duplicates function as "snapshots" of the object to be able to have a backup when doing destructive modeling on a mesh object.
+#
 # Copyright (C) 2019 Juan Cardenas
 #
 # This program is free software: you can redistribute it and/or modify
@@ -19,12 +21,12 @@
 # ##### END GPL LICENSE BLOCK #####
 
 bl_info = {
-    "name": "Iterate Model",
-    "description": "Panel tools for easy duplication and organization of objects into collections",
+    "name": "Iterate Objects",
+    "description": "Workflow Addon for easy duplication and organization of objects into collections, to work as \"backups\" for destructive modeling.",
     "author": "Juan Cardenas (JohnGDDR5)",
     "version": (1, 0), 
     "blender": (2, 80, 0),
-    "location": "3D View > Side Bar > Iterate Model",
+    "location": "3D View > Side Bar > Iterate Objects",
     "warning": "In Development",
     "support": "COMMUNITY",
     "category": "Scene"
@@ -37,61 +39,6 @@ from bpy.props import *
 #from mathutils import Matrix, Vector, Euler
 #import decimal
 #import copy
-
-"""
-#Takes in an object as parameter, and returns a string of variable "icon"
-def objectIcon(object):
-    scene = bpy.context.scene
-    data = bpy.data
-    props = scene.IM_Props
-    
-    #icons = ["OUTLINER_OB_EMPTY", "OUTLINER_OB_MESH", "OUTLINER_OB_CURVE", "OUTLINER_OB_LATTICE", "OUTLINER_OB_META", "OUTLINER_OB_LIGHT", "OUTLINER_OB_IMAGE", "OUTLINER_OB_CAMERA", "OUTLINER_OB_ARMATURE", "OUTLINER_OB_FONT", "OUTLINER_OB_SURFACE", "OUTLINER_OB_SPEAKER", "OUTLINER_OB_FORCE_FIELD", "OUTLINER_OB_GREASEPENCIL", "OUTLINER_OB_LIGHTPROBE"]
-    #Object Type
-    
-    icon = "BLANK1"
-    
-    #If there is an object to see if it has a type
-    if object is not None:
-        type = object.type
-        
-        if type == "MESH":
-            icon = "OUTLINER_OB_MESH"
-        elif type == "EMPTY":
-            if object.empty_display_type != "IMAGE":
-                icon = "OUTLINER_OB_EMPTY"
-            elif object.empty_display_type == "IMAGE":
-                icon = "OUTLINER_OB_IMAGE"
-            elif object.field.type != "NONE":
-                icon = "OUTLINER_OB_FORCE_FIELD"
-        elif type == "CAMERA":
-            icon = "OUTLINER_OB_CAMERA"
-        elif type == "CURVE":
-            icon = "OUTLINER_OB_CURVE"
-        elif type == "SURFACE":
-            icon = "OUTLINER_OB_SURFACE"
-        elif type == "META":
-            icon = "OUTLINER_OB_META"
-        elif type == "FONT":
-            icon = "OUTLINER_OB_FONT"
-        elif type == "GPENCIL":
-            icon = "OUTLINER_OB_GREASEPENCIL"
-        elif type == "ARMATURE":
-            icon = "OUTLINER_OB_ARMATURE"
-        elif type == "LATTICE":
-            icon = "OUTLINER_OB_LATTICE"
-        elif type == "LIGHT":
-            icon = "OUTLINER_OB_LIGHT"
-        elif type == "LIGHT_PROBE":
-            icon = "OUTLINER_OB_LIGHTPROBE"
-        elif type == "SPEAKER":
-            icon = "OUTLINER_OB_SPEAKER"
-        else:
-            icon = "QUESTION"
-            #pass
-    else:
-        icon = "QUESTION"
-    
-    return icon """
     
 #Takes in an object as parameter, and returns a string of variable "icon"
 def objectIcon(object):
@@ -135,66 +82,9 @@ def objectIcon(object):
                 icon = "OUTLINER_OB_FORCE_FIELD"
                 
     return icon
-    """
-    #If there is an object to see if it has a type
-    if object is not None:
-        type = object.type
-        
-        if type == "MESH":
-            icon = "OUTLINER_OB_MESH"
-        elif type == "EMPTY":
-            if object.empty_display_type != "IMAGE":
-                icon = "OUTLINER_OB_EMPTY"
-            elif object.empty_display_type == "IMAGE":
-                icon = "OUTLINER_OB_IMAGE"
-            elif object.field.type != "NONE":
-                icon = "OUTLINER_OB_FORCE_FIELD"
-        elif type == "CAMERA":
-            icon = "OUTLINER_OB_CAMERA"
-        elif type == "CURVE":
-            icon = "OUTLINER_OB_CURVE"
-        elif type == "SURFACE":
-            icon = "OUTLINER_OB_SURFACE"
-        elif type == "META":
-            icon = "OUTLINER_OB_META"
-        elif type == "FONT":
-            icon = "OUTLINER_OB_FONT"
-        elif type == "GPENCIL":
-            icon = "OUTLINER_OB_GREASEPENCIL"
-        elif type == "ARMATURE":
-            icon = "OUTLINER_OB_ARMATURE"
-        elif type == "LATTICE":
-            icon = "OUTLINER_OB_LATTICE"
-        elif type == "LIGHT":
-            icon = "OUTLINER_OB_LIGHT"
-        elif type == "LIGHT_PROBE":
-            icon = "OUTLINER_OB_LIGHTPROBE"
-        elif type == "SPEAKER":
-            icon = "OUTLINER_OB_SPEAKER"
-        else:
-            icon = "QUESTION"
-            #pass
-    else:
-        icon = "QUESTION"
-    
-    return icon """
-    
-#Commented for Parent_Collection Cleanup
-"""
-def findAxis(input):
-    indexAxis = 0
-    if input == "X":
-        indexAxis = 0
-    elif input == "Y":
-        indexAxis = 1
-    elif input == "Z":
-        indexAxis = 2
-        
-    return indexAxis
-"""
 
-class ITERATE_MODEL_OT_SelectCollection(bpy.types.Operator):
-    bl_idname = "iteratemodel.select_collection"
+class ITERATE_OBJECTS_OT_SelectCollection(bpy.types.Operator):
+    bl_idname = "iterate_objects.select_collection"
     bl_label = "Select Collection"
     bl_description = "Set collection as Parent or Active collection"
     bl_options = {'UNDO',}
@@ -204,23 +94,6 @@ class ITERATE_MODEL_OT_SelectCollection(bpy.types.Operator):
     def execute(self, context):
         scene = bpy.context.scene
         props = scene.IM_Props
-        
-        #This was commented for possible use in the future
-        """
-        #Select a collection 
-        if self.type == "SELECT_PARENT":
-            if self.index >= 0:
-                props.collection_parent = bpy.data.collections[self.index] 
-            else:
-                props.collection_parent = bpy.context.scene.collection
-            
-            if props.collection_active is None:
-                colNew = bpy.data.collections.new(props.group_name)
-                #Links colNew to collection_active
-                props.collection_active = colNew
-                props.collection_parent.children.link(colNew)
-            else:
-                pass """
                 
         if self.type == "SELECT_ACTIVE":
             props.collection_active = bpy.data.collections[self.index]
@@ -229,10 +102,10 @@ class ITERATE_MODEL_OT_SelectCollection(bpy.types.Operator):
         
         return {'FINISHED'}
 
-class ITERATE_MODEL_OT_GroupOperators(bpy.types.Operator):
-    bl_idname = "iteratemodel.collection_ops"
-    bl_label = "IterateModel Duplicating Operators"
-    bl_description = "IterateModel Duplicating Operators"
+class ITERATE_OBJECTS_OT_GroupOperators(bpy.types.Operator):
+    bl_idname = "iterate_objects.collection_ops"
+    bl_label = "Iterate Objects Duplicating Operators"
+    bl_description = "Iterate Objects Duplicating Operators"
     bl_options = {'UNDO',}
     type: bpy.props.StringProperty(default="DEFAULT")
     index: bpy.props.IntProperty(default=0, min=0)
@@ -244,29 +117,10 @@ class ITERATE_MODEL_OT_GroupOperators(bpy.types.Operator):
         #New Collection Group inside Parent Collection and set as Active Collection
         if self.type == "NEW_GROUP":
             
-            """
-            if props.reset_offsets == True:
-                for i in enumerate(bpy.context.scene.IM_Props.collections):
-                    if len(i[1].collection.objects) > 0:
-                        axis = findAxis(i[1].axis)
-                        for y in enumerate(reversed(i[1].collection.objects[0:-1])):
-                            print("Object: %s" % (y[1].name))
-                            print("Location[%d]: [%f]" % (axis, y[1].location[axis]))
-                            y[1].location[axis] -= ((y[0]+1) * i[1].offset)#(props.master_offset - i[1].offset))# + props.master_offset
-                            
-                            print("Location[%d]: [%f]" % (axis, y[1].location[axis])) """
-            
             colNew = bpy.data.collections.new(props.group_name)
             #Links colNew2 to collection_active
             props.collection_active = colNew
             
-            """
-            #If there is a Parent collection, link colNew to it
-            if props.collection_parent is not None:
-                props.collection_parent.children.link(colNew)
-            #if collection_parent is None, link new Collection to Master Collection
-            else:
-                bpy.context.scene.collection.children.link(colNew) """
             #Links new collection to Master_Collection
             bpy.context.scene.collection.children.link(colNew)
             
@@ -275,32 +129,13 @@ class ITERATE_MODEL_OT_GroupOperators(bpy.types.Operator):
             #Removes collections from all IM_Props.collections.collection
             for i in enumerate(props.collections):
                 i[1].collection = None
-                #i[1].duplicates = 0
-        
-        #Commented for Parent_Collection cleanup
-        """
-        #Create a new Collection Parent, link it to scene, and an Active Collection linked to Parent    
-        if self.type == "NEW_COLLECTION":
-            # Create a new collection and link it to the scene.
-            colNew = bpy.data.collections.new("Collection")
-            props.collection_parent = colNew
-            #Links new collection to Master Collection
-            scene.collection.children.link(colNew)
-            
-            #If collection active isn't none, make a new one for it, or don't change Active Collection
-            if props.collection_active is None:
-                #Creates new Group Collection
-                colNew2 = bpy.data.collections.new(props.group_name)
-                #Links colNew2 to collection_parent
-                props.collection_active = colNew2
-                props.collection_parent.children.link(colNew2) """
                 
         self.type == "DEFAULT"
         
         return {'FINISHED'}
         
-class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
-    bl_idname = "iteratemodel.duplicating_ops"
+class ITERATE_OBJECTS_OT_Duplicate(bpy.types.Operator):
+    bl_idname = "iterate_objects.duplicating_ops"
     bl_label = "Duplicates active objects"
     bl_description = "Duplicates active objects and sends them to the Active Collection"
     bl_options = {'UNDO',}
@@ -417,12 +252,13 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                         
                         existingCol = propsCol
                     
+                    """
                     #Doesn't Temporarily hides in the viewport
                     ob.hide_set(not props.hide_types[0])
                     #Doesn't Hide object from rendering
                     ob.hide_render = not props.hide_types[1]
                     #Doesn't Hide object from rendering
-                    ob.hide_viewport = not props.hide_types[2]
+                    ob.hide_viewport = not props.hide_types[2] """
                     
                     #Unselects duplicated object
                     ob.select_set(False)
@@ -433,6 +269,14 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
                 previous_active.select_set(True)
                 #Sets previously active object as active
                 bpy.context.view_layer.objects.active = previous_active
+                
+                #Sets IM_ULIndex as index of previously active context object
+                if props.index_to_new == True:
+                
+                    for i in enumerate(props.collections):
+                        if i[1].object == previous_active:
+                            props.IM_ULIndex = i[0]
+                            break
                     
             else:
                 reportString = "No Objects Selected. 0 Objects Duplicated"
@@ -446,133 +290,10 @@ class ITERATE_MODEL_OT_Duplicate(bpy.types.Operator):
         self.type == "DEFAULT"
         
         return {'FINISHED'}
-
         
-class ITERATE_MODEL_OT_ToggleHideObjects(bpy.types.Operator):
-    bl_idname = "iteratemodel.toggle_hide_objects"
-    bl_label = "Toggles Hide Except Recent"
-    bl_description = "Toggles Hide All Except Recent Iteration"
-    bl_options = {'UNDO',}
-    
-    state: bpy.props.BoolProperty(default=True)
-    type: bpy.props.StringProperty(default="DEFAULT")
-    index: bpy.props.IntProperty(default=0, min=0)
-    
-    @classmethod
-    def poll(cls, context):
-        scene = bpy.context.scene
-        props = scene.IM_Props
-        
-        return props.collection_active is not None
-    
-    def execute(self, context):
-        scene = bpy.context.scene
-        props = scene.IM_Props
-        
-        if self.type == "DEFAULT":
-            
-            #Iterates through every collection inside collection_active
-            for i in enumerate(bpy.context.scene.IM_Props.collection_active.children):
-                lastObject = len(i[1].objects)-1
-                
-                #If there is at least one object in a collection
-                if len(i[1].objects) > 0:
-                    enumObjects = enumerate(i[1].objects)
-                    if props.hide_last == False:
-                        
-                        if props.hide_types[0] == True:
-                            for j in enumerate(i[1].objects):
-                                j[1].hide_set(self.state)
-                                
-                        if props.hide_types[1] == True:
-                            for j in enumerate(i[1].objects):
-                                j[1].hide_render = self.state
-                                
-                        if props.hide_types[2] == True:
-                            for j in enumerate(i[1].objects):
-                                j[1].hide_viewport = self.state
-                    else:
-                        if props.hide_types[0] == True:
-                            for j in enumerate(i[1].objects[0:-1]):
-                                j[1].hide_set(self.state)
-                                
-                        if props.hide_types[1] == True:
-                            for j in enumerate(i[1].objects[0:-1]):
-                                j[1].hide_render = self.state
-                                
-                        if props.hide_types[2] == True:
-                            for j in enumerate(i[1].objects[0:-1]):
-                                j[1].hide_viewport = self.state 
-                """        
-                #Last Object
-                #If hide_types' Booleans are True, the Last Object's hidden stays Off. Else, they can be toggle on or off by the opeartor
-                if props.hide_last == False:
-                    i[1].objects[lastObject].hide_set(self.state)
-                    i[1].objects[lastObject].hide_render = self.state
-                    i[1].objects[lastObject].hide_viewport = self.state """
-                    
-        self.type == "DEFAULT"
-        
-        #Changes the state the operator hides and unhides properties, True or False
-        if self.state == True:
-            self.state = False
-        else:
-            self.state = True
-        
-        return {'FINISHED'}
-        
-class ITERATE_MODEL_OT_ToggleHideCollections(bpy.types.Operator):
-    bl_idname = "iteratemodel.toggle_hide_collections"
-    bl_label = "Toggles Hide Except Recent"
-    bl_description = "Toggles Hide All Except Recent Iteration"
-    bl_options = {'UNDO',}
-    
-    state: bpy.props.BoolProperty(default=True)
-    type: bpy.props.StringProperty(default="DEFAULT")
-    index: bpy.props.IntProperty(default=0, min=0)
-    
-    @classmethod
-    def poll(cls, context):
-        scene = bpy.context.scene
-        props = scene.IM_Props
-        
-        return props.collection_active is not None
-    
-    def execute(self, context):
-        scene = bpy.context.scene
-        props = scene.IM_Props
-        
-        if self.type == "DEFAULT":
-            
-            #Iterates through every collection inside collection_active
-            for i in enumerate(bpy.context.scene.IM_Props.collections):
-                #bpy.context.screen.areas[1].spaces[0].display_mode
-                
-                #bpy.context.scene.view_layers[0].active_layer_collection.name
-                #Returns "Group"
-                if i[1].collection is not None:
-                    if props.hide_types_collections[1] == True:
-                        i[1].collection.hide_render = self.state
-                    
-                    #Hides object from viewport
-                    if props.hide_types_collections[2] == True:
-                        i[1].collection.hide_viewport = self.state
-                        
-                    #Note: As of right now, I need a more complicated solution to be able to toggle the temporary Viewport Visibility [0] "Eye Icon" using python
-                    
-        self.type == "DEFAULT"
-        
-        #Changes the state the operator hides and unhides properties, True or False
-        if self.state == True:
-            self.state = False
-        else:
-            self.state = True
-        
-        return {'FINISHED'}
-        
-class ITERATE_MODEL_OT_Debugging(bpy.types.Operator):
-    bl_idname = "iteratemodel.debug"
-    bl_label = "IterateModel Debugging Operators"
+class ITERATE_OBJECTS_OT_Debugging(bpy.types.Operator):
+    bl_idname = "iterate_objects.debug"
+    bl_label = "Iterate Objects Debugging Operators"
     bl_description = "To assist with debugging and development"
     bl_options = {'UNDO',}
     type: bpy.props.StringProperty(default="DEFAULT")
@@ -618,8 +339,8 @@ class ITERATE_MODEL_OT_Debugging(bpy.types.Operator):
         
         return {'FINISHED'}
         
-class ITERATE_MODEL_OT_UIOperators(bpy.types.Operator):
-    bl_idname = "iteratemodel.ui_list_ops"
+class ITERATE_OBJECTS_OT_UIOperators(bpy.types.Operator):
+    bl_idname = "iterate_objects.ui_list_ops"
     bl_label = "List Operators"
     bl_description = "Operators for moving and deleting list rows"
     bl_options = {'UNDO',}
@@ -638,6 +359,8 @@ class ITERATE_MODEL_OT_UIOperators(bpy.types.Operator):
             #object:
             #duplicates:
             #recent:
+            
+        #Sets list_order to "CUSTOM" when moving list rows UP or DOWN
         if props.list_order != "CUSTOM" and self.type == "UP" or self.type == "DOWN":
             if props.list_reverse == "DESCENDING":
                 for i in enumerate(props.collections):
@@ -649,6 +372,7 @@ class ITERATE_MODEL_OT_UIOperators(bpy.types.Operator):
             props.list_order = "CUSTOM"
             print("Mc Bruh")
         
+        #Moves list row UP
         if self.type == "UP":
             
             if self.sub == "DEFAULT":
@@ -661,7 +385,8 @@ class ITERATE_MODEL_OT_UIOperators(bpy.types.Operator):
             elif self.sub == "TOP":
                 props.collections.move(active, 0)
                 props.IM_ULIndex = 0
-                
+        
+        #Moves list row DOWN
         elif self.type == "DOWN":
             
             if self.sub == "DEFAULT":
@@ -688,44 +413,14 @@ class ITERATE_MODEL_OT_UIOperators(bpy.types.Operator):
             elif self.sub == "ALL":
                 props.collections.clear()
         
-        #Sets self. into "DEFAULT"
+        #Resets self props into "DEFAULT"
         self.type == "DEFAULT"
         self.sub == "DEFAULT"
         
         return {'FINISHED'}
+            
 
-def updateValues(context):
-    props = bpy.context.scene.IM_Props
-    
-    IMCollect = props.collections
-    
-    #if len_original != 0:
-    if props.collections != None:
-        #New Length to subtract from i to get the new index of i
-        #len_sub = len(props.collections)
-        len_original = len(props.collections)
-        
-        for i in enumerate(props.collections):
-            
-            if i[1].object != None:
-                #bpy.context.scene.IM_Props.collections[0].collection.objects
-                
-            
-                if i[1].collection != None:
-                    #i[1].duplicates = len(i[1].collection.objects)
-                    pass
-            else:
-                new_index = i[0] - (len(props.collections)-i[0])
-                props.collections.remove(new_index+1)
-                pass
-    else:
-        print("Bruh 1")
-        
-    return None
-            
-        
-
-class ITERATE_MODEL_UL_items(bpy.types.UIList):
+class ITERATE_OBJECTS_UL_items(bpy.types.UIList):
     
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         scene = bpy.context.scene
@@ -749,10 +444,7 @@ class ITERATE_MODEL_UL_items(bpy.types.UIList):
                 else:
                     obItems = 0
                 
-                #info = '%d. %s: %d' % (index, item.object.name, len(item.collection.objects))
-                #info = '%d. %s: %d' % (index, obName, obItems)
-                
-                info = '%d. (%d)' % (index, obItems)#, obName, obItems)
+                info = '%d. (%d)' % (index+1, obItems)#, obName, obItems)
                 #bpy.context.scene.IM_Props.collections.add()
                 
                 #Displays icon of objects in list
@@ -771,57 +463,16 @@ class ITERATE_MODEL_UL_items(bpy.types.UIList):
                     
             else:
                 row.label(text="No Iterations Here")
-
+                
+        #Theres nothing in this layout_type since it isn't intended to be used.
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'
-            #row.prop(item, "resolution", text="", emboss=False, icon="NONE")
 
     def invoke(self, context, event):
         pass
-
-class ITERATE_MODEL_MT_CollectionsMenuParent(bpy.types.Menu):
-    bl_idname = "ITERATE_MODEL_MT_CollectionsMenuParent"
-    bl_label = "Select a Collection"
-    bl_description = "Dropdown to select a Parent Collection where Active Collections will be created. (Optional)"
-    
-    # here you specify how they are drawn
-    def draw(self, context):
-        layout = self.layout
-        scene = context.scene
-        data = bpy.data
-        props = scene.IM_Props
-        masterCol = bpy.context.scene.collection
-        #collection_active: 
-        #collections:
         
-        col = layout.column()
-        
-        #if self.type == "COLLECTION":
-        
-        row = col.row(align=True)
-        
-        button = row.operator("iteratemodel.select_collection", text=masterCol.name)
-        button.type = "SELECT_PARENT"
-        button.index = -1
-        
-        row = col.row(align=True)
-        
-        if len(bpy.data.collections) > 0:
-            for i in enumerate(bpy.data.collections):
-                button = row.operator("iteratemodel.select_collection", text=i[1].name)
-                button.type = "SELECT_PARENT"
-                button.index = i[0]
-                
-                row = col.row(align=True)
-        else:
-            #NEW_COLLECTION
-            button = row.operator("iteratemodel.collection_ops", text="Add Collection", icon="ADD")
-            button.type = "NEW_COLLECTION"
-            #bpy.data.collections.new("Boi") 
-        #row.prop(self, "ui_tab", expand=True)#, text="X")
-        
-class ITERATE_MODEL_MT_CollectionsMenuActive(bpy.types.Menu):
-    bl_idname = "ITERATE_MODEL_MT_CollectionsMenuActive"
+class ITERATE_OBJECTS_MT_CollectionsMenuActive(bpy.types.Menu):
+    bl_idname = "ITERATE_OBJECTS_MT_CollectionsMenuActive"
     bl_label = "Select a Collection for Active"
     bl_description = "Dropdown to select an Active Collection to iterate objects to"
     
@@ -838,21 +489,21 @@ class ITERATE_MODEL_MT_CollectionsMenuActive(bpy.types.Menu):
         
         if len(bpy.data.collections) > 0:
             for i in enumerate(bpy.data.collections):
-                button = row.operator("iteratemodel.select_collection", text=i[1].name)
+                button = row.operator("iterate_objects.select_collection", text=i[1].name)
                 button.type = "SELECT_ACTIVE"
                 button.index = i[0]
                 
                 row = col.row(align=True)
         else:
             #NEW_COLLECTION
-            button = row.operator("iteratemodel.collection_ops", text="Add Collection", icon = "ADD")
+            button = row.operator("iterate_objects.collection_ops", text="Add Collection", icon = "ADD")
             button.type = "NEW_COLLECTION"
             #bpy.data.collections.new("Boi") 
         #row.prop(self, "ui_tab", expand=True)#, text="X")
     
-class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
+class ITERATE_OBJECTS_PT_CustomPanel1(bpy.types.Panel):
     #A Custom Panel in Viewport
-    bl_idname = "ITERATE_MODEL_PT_CustomPanel1"
+    bl_idname = "ITERATE_OBJECTS_PT_CustomPanel1"
     bl_label = "Iterate Model"
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
@@ -866,44 +517,12 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         scene = context.scene
         props = scene.IM_Props
         
-        #active = props.RIA_ULIndex
-        #riaCollect = scene.RIA_Collections
-        #global aspect_ratios#, active
-        #active = props.RIA_ULIndex
-        #riaCollect = scene.RIA_Collections
-        #
         #Layout Starts
         col = layout.column()
         
-        """
-        #Parent Collection
-        row = col.row(align=True)
-        row.label(text="Parent Collection:")
-        
-        row = col.row(align=True)
-        
-        MenuName1 = "Select Collection"
-        
-        if props.collection_parent is not None:
-            MenuName1 = props.collection_parent.name
-        
-        #Lock Icon
-        if props.lock_parent == False:
-            row.prop(props, "lock_parent", icon="UNLOCKED", text="")
-        else:
-            row.prop(props, "lock_parent", icon="LOCKED", text="")
-        
-        #if props.collection_parent is None:
-        if props.lock_parent == False or props.collection_parent is None:
-            row.menu("ITERATE_MODEL_MT_CollectionsMenuParent", icon="GROUP", text=MenuName1)
-        else:
-            row.prop(props.collection_parent, "name", icon="GROUP", text="") """
-            
-        #row.operator("iteratemodel.collection_ops", icon="ADD", text="").type = "NEW_COLLECTION"
-        
         #Active Collection
         row = col.row(align=True)
-        row.label(text="Active Collection:")
+        row.label(text="Parent Collection:")
         
         row = col.row(align=True)
         
@@ -920,11 +539,11 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
             
         #if props.collection_active is None:
         if props.lock_active == False or props.collection_active is None:
-            row.menu("ITERATE_MODEL_MT_CollectionsMenuActive", icon="GROUP", text=MenuName2)
+            row.menu("ITERATE_OBJECTS_MT_CollectionsMenuActive", icon="GROUP", text=MenuName2)
         else:
             row.prop(props.collection_active, "name", icon="GROUP", text="")
             
-        row.operator("iteratemodel.collection_ops", icon="ADD", text="").type = "NEW_GROUP"
+        row.operator("iterate_objects.collection_ops", icon="ADD", text="").type = "NEW_GROUP"
         
         #Separates for extra space between
         col.separator()
@@ -951,7 +570,7 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         ob_name_iterate = "Iterate New" if iterateNew == False else "Iterate"
         
         row = col.row(align=True)
-        row.operator("iteratemodel.duplicating_ops", icon="DUPLICATE", text=ob_name_iterate).type = "DUPLICATE"
+        row.operator("iterate_objects.duplicating_ops", icon="DUPLICATE", text=ob_name_iterate).type = "DUPLICATE"
         
         row = col.row(align=True)
         
@@ -961,8 +580,7 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         
         #if props.dropdown_1 == True:
         row = col.row(align=True)
-        #row.label(text="", icon="BLANK1")
-        #row.label(text="Object: "+ob_name_1, icon="OUTLINER_OB_MESH")
+        
         row.label(text="Object: ", icon="OUTLINER_OB_MESH")
         row.label(text=ob_name_1)
             
@@ -976,21 +594,21 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         col = split.column(align=True)
         
         row = col.row(align=True)
-        row.template_list("ITERATE_MODEL_UL_items", "custom_def_list", props, "collections", props, "IM_ULIndex", rows=3)
+        row.template_list("ITERATE_OBJECTS_UL_items", "custom_def_list", props, "collections", props, "IM_ULIndex", rows=3)
         
         #Side_Bar Operators
         col = split.column(align=True)
         
         row = col.row(align=True)
-        button = row.operator("iteratemodel.ui_list_ops", text="", icon="TRIA_UP")
+        button = row.operator("iterate_objects.ui_list_ops", text="", icon="TRIA_UP")
         button.type = "UP"
         
         row = col.row(align=True)
-        button = row.operator("iteratemodel.ui_list_ops", text="", icon="TRIA_DOWN")
+        button = row.operator("iterate_objects.ui_list_ops", text="", icon="TRIA_DOWN")
         button.type = "DOWN"
         
         row = col.row(align=True)
-        button = row.operator("iteratemodel.ui_list_ops", text="", icon="PANEL_CLOSE")
+        button = row.operator("iterate_objects.ui_list_ops", text="", icon="PANEL_CLOSE")
         button.type = "REMOVE"
         
         row = col.row(align=True)
@@ -1001,66 +619,11 @@ class ITERATE_MODEL_PT_CustomPanel1(bpy.types.Panel):
         row.prop(props, "display_collections", text="", icon="GROUP")
         
         #End of CustomPanel
-
-class ITERATE_MODEL_PT_IterationCollectionSettings(bpy.types.Panel):
-    bl_label = "Iteration Collection Settings"
-    bl_parent_id = "ITERATE_MODEL_PT_CustomPanel1"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = 'UI'
-    #bl_context = "output"
-    bl_category = "Iterate Model"
-    
-    def draw(self, context):
-        layout = self.layout
-        scene = context.scene
-        data = bpy.data
-        props = scene.IM_Props
-        
-        #collection_active: 
-        #collections:
-        
-        col = layout.column()
-        
-        row = col.row(align=True)
-        row.label(text="Toggle:")
-        
-        #row = col.row(align=True)
-        
-        split = col.row(align=False)
-        #col = split.row(align=False)
-        
-        #row = col.row(align=False)
-        split.operator("iteratemodel.toggle_hide_objects", text="All Objects")
-        
-        row = split.row(align=True)
-        #row = col.row(align=True)
-        row.prop(props, "hide_types", index=0, text="", icon="HIDE_OFF")
-        row.prop(props, "hide_types", index=1, text="", icon="RESTRICT_RENDER_OFF")
-        row.prop(props, "hide_types", index=2, text="", icon="RESTRICT_VIEW_OFF")
-        
-        split = col.row(align=False)
-        split.operator("iteratemodel.toggle_hide_collections", text="All Collections")
-        
-        row = split.row(align=True)
-        
-        row.prop(props, "hide_types_collections", index=0, text="", icon="HIDE_OFF")
-        row.prop(props, "hide_types_collections", index=1, text="", icon="RESTRICT_RENDER_OFF")
-        row.prop(props, "hide_types_collections", index=2, text="", icon="RESTRICT_VIEW_OFF")
-        
-        row = col.row(align=True)
-        row.prop(props, "hide_last")#, index=2, text="")
-        
-        #col = layout.column()
-        
-        #row = col.row(align=True)
-        #row.label(text="Offset")
-        #row.prop(props, "reset_offsets")#, text=None, icon="ARROW_LEFTRIGHT")
-        
         
 
-class ITERATE_MODEL_PT_DisplaySettings(bpy.types.Panel):
+class ITERATE_OBJECTS_PT_DisplaySettings(bpy.types.Panel):
     bl_label = "Display Settings"
-    bl_parent_id = "ITERATE_MODEL_PT_CustomPanel1"
+    bl_parent_id = "ITERATE_OBJECTS_PT_CustomPanel1"
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
     #bl_context = "output"
@@ -1105,22 +668,22 @@ class ITERATE_MODEL_PT_DisplaySettings(bpy.types.Panel):
         
         row = col.row(align=True)
         
-        row.label(text="New Collection Name")
+        row.label(text="New Collection")
         
         row = col.row(align=True)
-        #row.prop(props, "group_name", text="Name", icon="NONE")
-        #row.label(text="Name")
+
+        row.prop(props, "index_to_new", text="Update Active List Index", icon="NONE")
+        
+        row = col.row(align=True)
+
         row.prop(props, "group_name_use", text="Use Object Name", icon="NONE")
         
         row = col.row(align=True)
         
+        #Grays row out with .active, but you can still change props inside it.
         row.active = not bool(props.group_name_use)
         
         row.prop(props, "group_name", text="New Name", icon="NONE")
-        
-        #row = col.row(align=True)
-        #row.prop(props, "group_name", text="Name", icon="NONE")
-        #row.prop(props, "group_name", text="", icon="NONE")
         
         row = col.row(align=True)
         #row.label(text="Hide Objects when Iterating")
@@ -1136,7 +699,7 @@ class ITERATE_MODEL_PT_DisplaySettings(bpy.types.Panel):
             row.label(text="Debug Operators:")
             
             row = col.row(align=True)
-            row.operator("iteratemodel.debug", text="Delete All").type = "DELETE"
+            row.operator("iterate_objects.debug", text="Delete All").type = "DELETE"
         
 
 def ListOrderUpdate(self, context):
@@ -1196,22 +759,9 @@ def ListOrderUpdate(self, context):
         props.collections.move(colLocation, i[0])
     
     return
-
-def printBruh(self, context):
     
-    print("printBruh Update:")
-    
-    return
-    
-def pollBruh(self, object):
-    
-    print("printBruh Update:")
-    print("Collection Parent Name: "+str(object))
-    
-    return
-    
-class ITERATE_MODEL_PreferencesMenu(bpy.types.AddonPreferences):
-    bl_idname = "iterate_model_addon_b2_80_v1_0"
+class ITERATE_OBJECTS_PreferencesMenu(bpy.types.AddonPreferences):
+    bl_idname = "iterate_objects_addon_b2_80_v1_0"
     # here you define the addons customizable props
     ui_tab: bpy.props.EnumProperty(name="Enum", items= [("GENERAL", "General", "General Options"), ("ABOUT", "About", "About Author & Where to Support")], description="Iterate Model UI Tabs", default="GENERAL")
     
@@ -1244,7 +794,7 @@ class ITERATE_MODEL_PreferencesMenu(bpy.types.AddonPreferences):
             row.operator("wm.url_open", text="Twitter").url = "https://twitter.com/JohnGDDR5"
             row.operator("wm.url_open", text="Artstation").url = "https://www.artstation.com/johngddr5"
 
-class ITERATE_MODEL_CollectionObjects(bpy.types.PropertyGroup):
+class ITERATE_OBJECTS_CollectionObjects(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(name="", default="")
     collection: bpy.props.PointerProperty(name="Added Collections to List", type=bpy.types.Collection)
     object: bpy.props.PointerProperty(name="Object", type=bpy.types.Object)
@@ -1253,21 +803,18 @@ class ITERATE_MODEL_CollectionObjects(bpy.types.PropertyGroup):
     
     recent: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
     custom: bpy.props.IntProperty(name="Int", description="", default= 0, min=0)
-    icon: bpy.props.StringProperty(name="Icon name for object", description="Used to display in the list", default="NONE")#, get=)#, update=checkIcon)
+    icon: bpy.props.StringProperty(name="Icon name for object", description="Used to display in the list", default="QUESTION")#, get=)#, update=checkIcon)
     
-class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
-    #collection_parent: bpy.props.PointerProperty(name="Collection to add Groups to", type=bpy.types.Collection, update=printBruh, poll=pollBruh)
+class ITERATE_OBJECTS_Props(bpy.types.PropertyGroup):
     #Tries to set collection_parent's default to Master Collection
     
     collection_active: bpy.props.PointerProperty(name="Collection to add Collections for Object duplicates", type=bpy.types.Collection)
     
-    #Booleans for locking collection of parent and active
-    
-    #lock_parent: bpy.props.BoolProperty(name="Lock Collection of Parent", description="When locked, you can now edit the name of the selected collection", default=False)
+    #Booleans for locking default collection of parent
     
     lock_active: bpy.props.BoolProperty(name="Lock Collection of Active", description="When locked, you can now edit the name of the selected collection", default=False)
     
-    collections: bpy.props.CollectionProperty(type=ITERATE_MODEL_CollectionObjects)
+    collections: bpy.props.CollectionProperty(type=ITERATE_OBJECTS_CollectionObjects)
     
     IM_ULIndex: bpy.props.IntProperty(name="List Index", description="UI List Index", default= 0, min=0)
     
@@ -1289,39 +836,33 @@ class ITERATE_MODEL_Props(bpy.types.PropertyGroup):
     
     display_icons: bpy.props.BoolProperty(name="Display Icons", description="Display icons of objects in the list", default=True)
     
+    index_to_new: bpy.props.BoolProperty(name="Updates Active List Index to New Iteration Object", description="Sets Active list index to New Iteration Object that was added.", default=True)
+    
     debug_mode: bpy.props.BoolProperty(name="Display Debug Operators", description="To aid in Debugging Operators. Displayed in \"Display Settings\"", default=True)
     
     #For Iterate Collection Settings and Operators
     
-    hide_types: bpy.props.BoolVectorProperty(name="Iterate Object Hide Types", description="Toggle Hidden Types of all except most Recent Duplicated Object", default= [True, True, True], size=3)
-    
-    hide_types_collections: bpy.props.BoolVectorProperty(name="Iterate Collection Hide Types", description="Toggle Hidden Types of all Iterate Collections", default= [False, True, True], size=3)
-    
     #hide_types_last
-    hide_last: bpy.props.BoolProperty(name="Exclude Recent Iteration", description="When using the operators for toggling \"all objects\"", default=False)
+    #hide_last: bpy.props.BoolProperty(name="Exclude Recent Iteration", description="When using the operators for toggling \"all objects\"", default=False)
     
 #Classes that are registered
 classes = (
-    ITERATE_MODEL_OT_SelectCollection,
-    ITERATE_MODEL_OT_GroupOperators,
-    ITERATE_MODEL_OT_Duplicate,
+    ITERATE_OBJECTS_OT_SelectCollection,
+    ITERATE_OBJECTS_OT_GroupOperators,
+    ITERATE_OBJECTS_OT_Duplicate,
     
-    ITERATE_MODEL_OT_ToggleHideObjects,
-    ITERATE_MODEL_OT_ToggleHideCollections,
-    ITERATE_MODEL_OT_Debugging,
-    ITERATE_MODEL_OT_UIOperators,
+    ITERATE_OBJECTS_OT_Debugging,
+    ITERATE_OBJECTS_OT_UIOperators,
     
-    ITERATE_MODEL_UL_items,
-    ITERATE_MODEL_MT_CollectionsMenuParent,
-    ITERATE_MODEL_MT_CollectionsMenuActive,
+    ITERATE_OBJECTS_UL_items,
+    ITERATE_OBJECTS_MT_CollectionsMenuActive,
     
-    ITERATE_MODEL_PT_CustomPanel1,
-    ITERATE_MODEL_PT_IterationCollectionSettings,
-    ITERATE_MODEL_PT_DisplaySettings,
+    ITERATE_OBJECTS_PT_CustomPanel1,
+    ITERATE_OBJECTS_PT_DisplaySettings,
     
-    ITERATE_MODEL_PreferencesMenu,
-    ITERATE_MODEL_CollectionObjects,
-    ITERATE_MODEL_Props,
+    ITERATE_OBJECTS_PreferencesMenu,
+    ITERATE_OBJECTS_CollectionObjects,
+    ITERATE_OBJECTS_Props,
 )
 
 def register():
@@ -1331,7 +872,7 @@ def register():
         register_class(cls)
     
     #bpy.types.Scene.IM_Collections = bpy.props.CollectionProperty(type=REF_IMAGEAID_Collections)
-    bpy.types.Scene.IM_Props = bpy.props.PointerProperty(type=ITERATE_MODEL_Props)
+    bpy.types.Scene.IM_Props = bpy.props.PointerProperty(type=ITERATE_OBJECTS_Props)
     
 def unregister():
     #ut = bpy.utils
