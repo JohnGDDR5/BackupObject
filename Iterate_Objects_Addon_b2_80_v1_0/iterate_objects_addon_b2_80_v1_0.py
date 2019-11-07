@@ -159,6 +159,13 @@ class ITERATE_OBJECTS_OT_Duplicate(bpy.types.Operator):
         
         if self.type == "DUPLICATE":
             
+            #prev_mode saves the previous mode of the object
+            prev_mode = str(bpy.context.object.mode)
+            
+            #.mode_set() operator changes the mode of the object to "OBJECT" mode for the .duplicate_move() operator to work
+            if prev_mode != "OBJECT":
+                bpy.ops.object.mode_set(mode="OBJECT")
+            
             #if props.collection_parent is not None:
                 #Was here before
                 
@@ -286,6 +293,9 @@ class ITERATE_OBJECTS_OT_Duplicate(bpy.types.Operator):
             
             #Calls the update function ListOrderUpdate to change locations of props.collections
             ListOrderUpdate(self, context)
+            
+            #Changes the Mode of the active object back to its previous mode.
+            bpy.ops.object.mode_set(mode=prev_mode)
                         
         self.type == "DEFAULT"
         
@@ -804,18 +814,21 @@ def ListOrderUpdate(self, context):
     if props.list_reverse == "ASCENDING":
         reverseBool = True
         
-        
+    #Updates the UI List selected index when ListOrderUpdate is called
     props.IM_ULIndex = len(props.collections)-props.IM_ULIndex-1
-    #else:
-        #props.IM_ULIndex = props.IM_ULIndex-len(props.collections)-1
         
+    # "a" parameter would be an object with methods
     def returnOrder(a):
-        #value = None
+        #Returns len() of objects in collection, else return 0
         if props.list_order == "DUPLICATES":
-            #Returns len() of objects in collection, else return 0
-            return len(a.collection.objects) if a.collection != None else 0#a.duplicates
+            
+            return len(a.collection.objects) if a.collection != None else 0
+            
+        #Returns the integer value of the order the objects were created
         if props.list_order == "RECENT":
             return a.recent
+            
+        #Returns custom value order made by user in the UI List
         if props.list_order == "CUSTOM":
             return a.custom
         
