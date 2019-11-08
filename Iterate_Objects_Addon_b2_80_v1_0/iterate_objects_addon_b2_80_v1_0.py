@@ -386,7 +386,7 @@ class ITERATE_OBJECTS_OT_Cleaning(bpy.types.Operator):
             before = list(props.collections)
             #col_name = "[No Collection]"
             
-            for i in reversed(list(enumerate(before))):
+            for i in enumerate(props.collections):
                 
                 if i[1].collection != None:
                     #ob_name = ""
@@ -397,12 +397,9 @@ class ITERATE_OBJECTS_OT_Cleaning(bpy.types.Operator):
                     else:
                         ob_name = "[No Object]"
                         
-                    #for j in reversed(list(enumerate(i[1].collection.objects))):
-                    if props.clean_leave > 0:
-                        list_rev = list(reversed(list(enumerate(i[1].collection.objects))))[props.clean_leave:]
-                    else:
-                        list_rev = list(reversed(list(enumerate(i[1].collection.objects))))
-                    #print("Reversed (%d): %s " % (len(i[1].collection.objects), str(list(list_rev))) )
+                    #Everyithing but the last # of objects from props.clean_leave integer
+                    list_rev = reversed(list(enumerate(i[1].collection.objects[:-props.clean_leave])))
+                    
                     len_prev = len(i[1].collection.objects)
                     
                     removed = 0
@@ -411,15 +408,10 @@ class ITERATE_OBJECTS_OT_Cleaning(bpy.types.Operator):
                         bpy.data.objects.remove(j[1])
                         removed += 1;
                         
+                        
                     print("Index [%d]: Prev_Len: %d, Removed %d, [Object: %s; Collection: %s ]" % (i[0], len_prev, removed, ob_name, col_name))
-                    
-                    #bpy.context.scene.IM_Props.collections.remove(i[0])
-                    
-                    #del before[i[0]]
                 else:
                     pass
-                    
-            #print("Before: "+str(before[::]))
             
             #Prints the last ammount of different Iterate Objects calculated
             print("Removed: ( %d/%d ) Iterate Objects \n" % (len_diff, len_previous))
