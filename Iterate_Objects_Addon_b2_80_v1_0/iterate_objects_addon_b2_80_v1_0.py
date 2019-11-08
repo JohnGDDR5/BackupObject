@@ -427,66 +427,79 @@ class ITERATE_OBJECTS_OT_Removing(bpy.types.Operator):
                     print("before[i[0]]: [%d]; Object.name: %s" % (i[0], before[i[0]].object.name))
                     del before[i[0]]
                     
-        elif self.type == "CLEAN":
+        #Prints the Iterate Objects with 1 or less objects
+        elif self.type == "PRINT_DIFFERENT_1":
             #Gets previous length of props.collections
             len_previous = len(props.collections)
             
-            before = list(props.collections)
+            len_diff = 0
             
-            for i in reversed(list(enumerate(before))):
-                print(" i : " + str(i))
-                #if len(i[1].collection.objects) == 0:
-                if i[1].object == None or i[1].collection == None:
-                    name = ""
-                    if i[1].object != None:
-                        name = str(i[1].object.name)
-                    else:
-                        if i[1].collection != None:
-                            name = str(i[1].collection.name)
-                        else:
-                            name = "Bruh"
-                    print("before[i[0]]: [%d]; Object.name: %s" % (i[0], name))
-                    del before[i[0]]
+            #before = list(props.collections)
+            print("Iterate Objects with 1 Object or Less in .Collection: ")
+            
+            for i in enumerate(props.collections):
+                #Checks if i[1] has an object for a name
+                if i[1].object != None:
+                    ob_name = i[1].object.name
+                else:
+                    ob_name = "[No Object]"
                     
-            print("Before: "+str(before[::]))
-            
+                col_name = "[No Collection]"
+                objects = 0
+                    
+                #If there is a collection pointer
+                if i[1].collection != None:
+                    objects = len(i[1].collection.objects)
+                    #Checks if there is 1 or less objects in the collection
+                    if objects <= 1:
+                        #Sets the col_name variable to collection name
+                        col_name = i[1].collection.name
+                        len_diff += 1
+                #else:
+                #    col_name = "[No Collection]"
+                    
+                if objects <= 1:
+                    print("Index[%d] (Objects: %d) [Object: %s; Collection: %s ]" % (i[0], objects, ob_name, col_name))
+                
+            #Prints the last ammount of different Iterate Objects calculated
+            print("Different: ( %d/%d ) Iterate Objects \n" % (len_diff, len_previous))
+                    
+        #Deletes Iterate Objects without an Object or Collection pointer
         elif self.type == "CLEAN_2":
             #Gets previous length of props.collections
             len_previous = len(props.collections)
             
+            len_diff = 0
+            
             before = list(props.collections)
             
             for i in reversed(list(enumerate(before))):
-                print(" i : " + str(i))
+                #print(" i : " + str(i))
                 #if len(i[1].collection.objects) == 0:
                 if i[1].object == None or i[1].collection == None:
-                    name = ""
+                    #ob_name = ""
                     if i[1].object != None:
-                        name = str(i[1].object.name)
+                        ob_name = str(i[1].object.name)
                     else:
-                        if i[1].collection != None:
-                            name = str(i[1].collection.name)
-                        else:
-                            name = "Bruh"
-                    print("before[i[0]]: [%d]; Object.name: %s" % (i[0], name))
+                        ob_name = "[No Collection]"
+                    #else:
+                    if i[1].collection != None:
+                        col_name = str(i[1].collection.name)
+                    else:
+                        col_name = "[No Collection]"
+                        
+                    print("Removed [%d]: [Object: %s; Collection: %s ]" % (i[0], ob_name, col_name))
                     
                     bpy.context.scene.IM_Props.collections.remove(i[0])
                     
                     del before[i[0]]
                     
-            print("Before: "+str(before[::]))
+            #print("Before: "+str(before[::]))
+            
+            #Prints the last ammount of different Iterate Objects calculated
+            print("Removed: ( %d/%d ) Iterate Objects \n" % (len_diff, len_previous))
                     
-        elif self.type == "TESTING":
-            #Gets previous length of props.collections
-            ob_1 = props.collections.add()
-            ob_1.collection = bpy.data.collections[0]
-            
-            ob_2 = props.collections.add()
-            ob_2.object = bpy.data.objects[0]
-            
-            
-            ob_3 = props.collections.add()
-            print("Added 3 Iterate Objects.")
+        
                     
         self.type == "DEFAULT"
         
@@ -558,6 +571,19 @@ class ITERATE_OBJECTS_OT_Debugging(bpy.types.Operator):
             print("Total Objects: %d" % (len(props.collections)))
             #Displays how many Iteration Objects don't have Objects or Collections
             print("No Objects: %d; No Collections: %d" % (no_objects, no_collections))
+        
+        #Adds 3 Iterate Objects with missing Objects & Collections for testing.
+        elif self.type == "TESTING":
+            
+            ob_1 = props.collections.add()
+            ob_1.collection = bpy.data.collections[0]
+            
+            ob_2 = props.collections.add()
+            ob_2.object = bpy.data.objects[0]
+            
+            ob_3 = props.collections.add()
+            print("Added 3 Iterate Objects.")
+            
         self.type == "DEFAULT"
         
         return {'FINISHED'}
@@ -934,15 +960,18 @@ class ITERATE_OBJECTS_PT_DisplaySettings(bpy.types.Panel):
             row.label(text="Debug Operators:")
             
             row = col.row(align=True)
-            row.operator("iterate_objects.removing_ops", text="Delete Test Print").type = "PRINT"
+            row.operator("iterate_objects.removing_ops", text="Print Different").type = "PRINT_DIFFERENT_1"
             
-            row = col.row(align=True)
-            row.operator("iterate_objects.removing_ops", text="Delete Test").type = "CLEAN"
-            
-            row.operator("iterate_objects.removing_ops", text="Add 3 Objects").type = "TESTING"
+            #row = col.row(align=True)
+            #row.operator("iterate_objects.removing_ops", text="Delete Test").type = "CLEAN"
             
             row = col.row(align=True)
             row.operator("iterate_objects.removing_ops", text="Delete Real").type = "CLEAN_2"
+            
+            row.separator()
+            
+            row = col.row(align=True)
+            row.operator("iterate_objects.debug", text="Add 3 Objects").type = "TESTING"
             
             row.separator()
             
