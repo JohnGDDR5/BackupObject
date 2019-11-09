@@ -992,22 +992,30 @@ class ITERATE_OBJECTS_PT_DisplaySettings(bpy.types.Panel):
         
         row.prop(props, "group_name", text="New Name", icon="NONE")
         
-        #Operator to clean the list
-        """
-        row = col.row(align=True)
-        button = row.operator("iterate_objects.cleaning_ops", text="Clean Iteration Object List", icon="TRASH")
-        button.type = "DELETE" """
-        
+            
+class ITERATE_OBJECTS_PT_Cleaning(bpy.types.Panel):
+    bl_label = "Cleaning Operators"
+    bl_parent_id = "ITERATE_OBJECTS_PT_CustomPanel1"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = 'UI'
+    #bl_context = "output"
+    bl_category = "Iterate Model"
+    
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        data = bpy.data
+        props = scene.IM_Props
         
         col = layout.column(align=False)
         
-        col.separator()
+        #col.separator()
+        
+        #row = col.row(align=True)
+        #row.label(text="Cleaning Operators:")
         
         row = col.row(align=True)
-        row.label(text="Cleaning Operators:")
-        
-        row = col.row(align=True)
-        row.operator("iterate_objects.cleaning_ops", text="Clean Collections").type = "CLEAN_1"
+        row.operator("iterate_objects.cleaning_ops", icon="TRASH", text="Clean Collections").type = "CLEAN_1"
         
         row = col.row(align=True)
         row.prop(props, "clean_leave", text="Leave")
@@ -1015,33 +1023,33 @@ class ITERATE_OBJECTS_PT_DisplaySettings(bpy.types.Panel):
         col.separator()
         
         row = col.row(align=True)
-        row.operator("iterate_objects.cleaning_ops", text="Remove Empty").type = "CLEAN_2"
+        row.label(text="Cleaning List:")
+        
+        row = col.row(align=True)
+        row.operator("iterate_objects.cleaning_ops", text="Remove Empty in List").type = "CLEAN_2"
+        
+        col.separator()
         
         if props.debug_mode == True:
             #Debug Operators
             row = col.row(align=True)
+            #Dropdown Arrow Boolean
+            row.prop(props, "debug_mode_arrow", text="", icon="DOWNARROW_HLT")
             row.label(text="Debug Operators:")
             
-            row = col.row(align=True)
-            row.operator("iterate_objects.removing_ops", text="Print Different").type = "PRINT_DIFFERENT_1"
-            
-            #row = col.row(align=True)
-            #row.operator("iterate_objects.removing_ops", text="Delete Test").type = "CLEAN"
-            
-            
-            col.separator()
-            
-            row = col.row(align=True)
-            row.operator("iterate_objects.debug", text="Add 3 Objects").type = "TESTING"
-            
-            col.separator()
-            
-            row = col.row(align=True)
-            row.operator("iterate_objects.debug", text="Delete All").type = "DELETE"
-            
-            row = col.row(align=True)
-            row.operator("iterate_objects.debug", text="Print Objects/Collections").type = "PRINT_1"
-            
+            if props.debug_mode_arrow == True:
+                
+                row = col.row(align=True)
+                row.operator("iterate_objects.removing_ops", text="Print Different").type = "PRINT_DIFFERENT_1"
+                
+                row = col.row(align=True)
+                row.operator("iterate_objects.debug", text="Add 3 Objects").type = "TESTING"
+                
+                row = col.row(align=True)
+                row.operator("iterate_objects.debug", text="Delete All").type = "DELETE"
+                
+                row = col.row(align=True)
+                row.operator("iterate_objects.debug", text="Print Objects/Collections").type = "PRINT_1"
 
 def ListOrderUpdate(self, context):
     scene = bpy.context.scene
@@ -1186,6 +1194,8 @@ class ITERATE_OBJECTS_Props(bpy.types.PropertyGroup):
     
     debug_mode: bpy.props.BoolProperty(name="Display Debug Operators", description="To aid in Debugging Operators. Displayed in \"Display Settings\"", default=True)
     
+    debug_mode_arrow: bpy.props.BoolProperty(name="Debug Mode Dropdown Arrow", description="To display Debug Mode", default=True)
+    
     #For Iterate Collection Settings and Operators
     
     #hide_types_last
@@ -1207,6 +1217,7 @@ classes = (
     
     ITERATE_OBJECTS_PT_CustomPanel1,
     ITERATE_OBJECTS_PT_DisplaySettings,
+    ITERATE_OBJECTS_PT_Cleaning,
     
     ITERATE_OBJECTS_PreferencesMenu,
     ITERATE_OBJECTS_CollectionObjects,
