@@ -1094,11 +1094,6 @@ class ITERATE_OBJECTS_PT_Cleaning(bpy.types.Panel):
         
         col = layout.column(align=False)
         
-        #col.separator()
-        
-        #row = col.row(align=True)
-        #row.label(text="Cleaning Operators:")
-        
         row = col.row(align=True)
         row.operator("iterate_objects.cleaning_ops", icon="TRASH", text="Clean Collections").type = "CLEAN_1"
         
@@ -1122,42 +1117,27 @@ class ITERATE_OBJECTS_PT_Cleaning(bpy.types.Panel):
             row.prop(props, "debug_mode_arrow", text="", icon="DOWNARROW_HLT")
             row.label(text="Debug Operators:")
             
-<<<<<<< HEAD
             if props.debug_mode_arrow == True:
                 
                 row = col.row(align=True)
-                row.operator("iterate_objects.removing_ops", text="Print Different").type = "PRINT_DIFFERENT_1"
+                row.operator("iterate_objects.debug", text="Print Different").type = "PRINT_DIFFERENT_1"
+                
+                #row = col.row(align=True)
+                #row.operator("iterate_objects.debug", text="Delete Test").type = "CLEAN"
+                
+                col.separator()
                 
                 row = col.row(align=True)
                 row.operator("iterate_objects.debug", text="Add 3 Objects").type = "TESTING"
                 
+                col.separator()
+                
                 row = col.row(align=True)
-                row.operator("iterate_objects.debug", text="Delete All").type = "DELETE"
+                row.operator("iterate_objects.debug", text="Delete All").type = "DELETE_NUKE"
                 
                 row = col.row(align=True)
                 row.operator("iterate_objects.debug", text="Print Objects/Collections").type = "PRINT_1"
-=======
-            row = col.row(align=True)
-            row.operator("iterate_objects.debug", text="Print Different").type = "PRINT_DIFFERENT_1"
             
-            #row = col.row(align=True)
-            #row.operator("iterate_objects.debug", text="Delete Test").type = "CLEAN"
-            
-            
-            col.separator()
-            
-            row = col.row(align=True)
-            row.operator("iterate_objects.debug", text="Add 3 Objects").type = "TESTING"
-            
-            col.separator()
-            
-            row = col.row(align=True)
-            row.operator("iterate_objects.debug", text="Delete All").type = "DELETE_NUKE"
-            
-            row = col.row(align=True)
-            row.operator("iterate_objects.debug", text="Print Objects/Collections").type = "PRINT_1"
-            
->>>>>>> 8d6e51722d39a8a32c6ee263389d295176ecada8
 
 def ListOrderUpdate(self, context):
     scene = bpy.context.scene
