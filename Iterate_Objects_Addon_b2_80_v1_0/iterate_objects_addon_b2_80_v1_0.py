@@ -104,8 +104,8 @@ class ITERATE_OBJECTS_OT_SelectCollection(bpy.types.Operator):
 
 class ITERATE_OBJECTS_OT_GroupOperators(bpy.types.Operator):
     bl_idname = "iterate_objects.collection_ops"
-    bl_label = "New Iterate Objects Parent Collection"
-    bl_description = "Creates a new Collection to use as the Parent Collection of new Iterate Objects\' collections"
+    bl_label = "Iterate Objects Duplicating Operators"
+    bl_description = "Iterate Objects Duplicating Operators"
     bl_options = {'UNDO',}
     type: bpy.props.StringProperty(default="DEFAULT")
     index: bpy.props.IntProperty(default=0, min=0)
@@ -137,7 +137,7 @@ class ITERATE_OBJECTS_OT_GroupOperators(bpy.types.Operator):
 class ITERATE_OBJECTS_OT_Duplicate(bpy.types.Operator):
     bl_idname = "iterate_objects.duplicating_ops"
     bl_label = "Duplicates active objects"
-    bl_description = "Duplicates active objects and sends them to the their own Iterate Object collection. Creates a new Iterate Object and collection for objects without an Iterate Object."
+    bl_description = "Duplicates active objects and sends them to the Active Collection"
     bl_options = {'UNDO',}
     
     type: bpy.props.StringProperty(default="DEFAULT")
@@ -365,18 +365,18 @@ class ITERATE_OBJECTS_OT_Cleaning(bpy.types.Operator):
 class ITERATE_OBJECTS_OT_Cleaning(bpy.types.Operator):
     bl_idname = "iterate_objects.cleaning_ops"
     bl_label = "Cleaning/Deleting Operators "
-    bl_description = "Cleaning & Deleting Iterate Objects & Objects inside their collections."
+    bl_description = "Deletes up to a set ammount of Iterated Objects from their collections. Also opearators to clean the UI list with previous Objects set to be Iterated that have been or their collection deleted."
     bl_options = {'UNDO',}
     
     type: bpy.props.StringProperty(default="DEFAULT")
-    index: bpy.props.IntProperty(default=0, min=0)
+    #index: bpy.props.IntProperty(default=0, min=0)
     
     def execute(self, context):
         scene = bpy.context.scene
         props = scene.IM_Props
         
         #Deletes Objects inside Iterate Object collections, except most recent ammounts given by user
-        if self.type == "CLEAN_1":
+        if self.type == "CLEAN_COLLECTION_OBJECTS":
         
             #Gets previous length of props.collections
             len_previous = len(props.collections)
@@ -386,53 +386,38 @@ class ITERATE_OBJECTS_OT_Cleaning(bpy.types.Operator):
             before = list(props.collections)
             #col_name = "[No Collection]"
             
-            affected_collections = 0
-            
-            removed_total = 0
-            
             #Goes through every Iterate Object
             for i in enumerate(props.collections):
-                #If there is a collection its pointing to
+                
                 if i[1].collection != None:
-                    #name of collection
+                    #ob_name = ""
                     col_name = str(i[1].collection.name)
                     
-                    #gets name of pointed object
                     if i[1].object != None:
                         ob_name = str(i[1].object.name)
                     else:
                         ob_name = "[No Object]"
                         
-                    list_before = i[1].collection.objects[:-props.clean_leave]
                     #Everyithing but the last # of objects from props.clean_leave integer
-                    list_rev = reversed(list(enumerate(list_before)))
+                    list_rev = reversed(list(enumerate(i[1].collection.objects[:-props.clean_leave])))
                     
-                    if len(list_before) > props.clean_leave:
-                        len_prev = len(i[1].collection.objects)
+                    len_prev = len(i[1].collection.objects)
+                    
+                    removed = 0
+                    
+                    for j in list_rev:
+                        bpy.data.objects.remove(j[1])
+                        removed += 1;
                         
-                        removed = 0
-                        
-                        for j in list_rev:
-                            bpy.data.objects.remove(j[1])
-                            removed += 1;
-                            
-                        removed_total += removed
-                        
-                        affected_collections += 1
-                            
-                        #print("Index [%d]: Prev_Len: %d, Removed %d, [Object: %s; Collection: %s ]" % (i[0], len_prev, removed, ob_name, col_name))
-                    else:
-                        pass
+                    print("Index [%d]: Prev_Len: %d, Removed %d, [Object: %s; Collection: %s ]" % (i[0], len_prev, removed, ob_name, col_name))
                 else:
                     pass
             
             #Prints the last ammount of different Iterate Objects calculated
-            #print("Removed: ( %d/%d ) Iterate Objects \n" % (len_diff, len_previous))
-            
-            reportString = "Removed: %d Objects from %d Iterate Objects Collections" % (removed_total, affected_collections)
+            reportString = "Removed: ( %d/%d ) Iterate Objects \n" % (len_diff, len_previous)
         
         #Deletes Iterate Objects without an Object or Collection pointer
-        elif self.type == "CLEAN_2":
+        elif self.type == "CLEAN_NOT_FOUND":
         
             #Gets previous length of props.collections
             len_previous = len(props.collections)
@@ -459,15 +444,11 @@ class ITERATE_OBJECTS_OT_Cleaning(bpy.types.Operator):
                     bpy.context.scene.IM_Props.collections.remove(i[0])
             
             #Prints the last ammount of different Iterate Objects calculated
-            #print("Removed: ( %d/%d ) Iterate Objects \n" % (len_diff, len_previous))
-            
-            reportString = "Removed: ( %d/%d ) Iterate Objects that were empty" % (len_diff, len_previous)
-            
-        print(reportString + "\n")
-        
-        self.report({'INFO'}, reportString)
+            reportString = "Removed: ( %d/%d ) Iterate Objects \n" % (len_diff, len_previous)
             
         self.type == "DEFAULT"
+        print(reportString)
+        self.report({'INFO'}, reportString)
         
         return {'FINISHED'}
 
@@ -572,9 +553,22 @@ class ITERATE_OBJECTS_OT_Debugging(bpy.types.Operator):
     bl_idname = "iterate_objects.debug"
     bl_label = "Iterate Objects Debugging Operators"
     bl_description = "To assist with debugging and development"
-    bl_options = {'UNDO',}
+    bl_options = {'UNDO','REGISTER'}
     type: bpy.props.StringProperty(default="DEFAULT")
     #index: bpy.props.IntProperty(default=0, min=0)
+    
+    def invoke(self, context, event):
+        #self.x = event.mouse_x
+        #self.y = event.mouse_y
+        if self.type != "DELETE_NUKE":
+            return self.execute(context)
+        else:
+            print("MLG")
+            wm = context.window_manager
+            print(str(event))
+            #invoke_props_popup(operator, event)
+            #return wm.invoke_props_dialog(self)
+            return wm.invoke_confirm(self, event)
     
     def execute(self, context):
         scene = bpy.context.scene
@@ -731,6 +725,9 @@ class ITERATE_OBJECTS_OT_Debugging(bpy.types.Operator):
             #Prints the last ammount of different Iterate Objects calculated
             print("Removed: ( %d/%d ) Iterate Objects \n" % (len_diff, len_previous))
             
+        elif self.type == "Bruh":
+            print(("O"*10)+"F")
+            
         #Resets default settings
         self.type == "DEFAULT"
         
@@ -815,6 +812,27 @@ class ITERATE_OBJECTS_OT_UIOperators(bpy.types.Operator):
             #Note: This only removes the props.collections, not the actual collections or objects
             elif self.sub == "ALL":
                 props.collections.clear()
+                
+        elif self.type == "SELECT_ACTIVE_UI":
+            active_object = bpy.context.active_object
+            if active_object != None:
+                found = False
+                
+                for i in enumerate(props.collections):
+                    if active_object == i[1].object:
+                        props.IM_ULIndex = i[0]
+                        found = True
+                        break
+                        
+                if found == False:
+                    reportString = "%s not in Iteration List" % (active_object.name)
+                    
+                    self.report({'INFO'}, reportString)
+            else:
+                reportString = "No Active Object"
+                    
+                self.report({'INFO'}, reportString)
+            
         
         #Resets self props into "DEFAULT"
         self.type == "DEFAULT"
@@ -838,9 +856,6 @@ class ITERATE_OBJECTS_UL_items(bpy.types.UIList):
             row = layout.row(align=True)
             
             if len(IMCollect) > 0:
-                #obName
-                #obName = item.object.name if item.object != None else "Row"+str(index)
-                
                 #obItems
                 if item.collection != None:
                     obItems = len(item.collection.objects)
@@ -862,17 +877,25 @@ class ITERATE_OBJECTS_UL_items(bpy.types.UIList):
                         
                 #Checks if the item has an object pointed
                 if item.object != None:
-                    row.prop(item.object, "name", text=info)
+                    row.prop(item.object, "name", text=info, emboss=False)
                     
                 else:
-                    row.label(text=info+": [No Object]")
+                    col = row.column()
+                    #Grays this out
+                    col.enabled = False
+                    
+                    col.prop(props, "error_object", text=info, emboss=False)
                 
                 if props.display_collections == True:
                     if item.collection != None:
-                        row.prop(item.collection, "name", text="", icon="GROUP")
+                        row.prop(item.collection, "name", text="", icon="GROUP", emboss=False)
                         
                     else:
-                        row.label(text="[No Collection]")
+                        col = row.column()
+                        #Grays this out
+                        col.enabled = False
+                        
+                        col.prop(props, "error_collection", text="", icon="GROUP", emboss=False)
                     
             else:
                 row.label(text="No Iterations Here")
@@ -887,7 +910,7 @@ class ITERATE_OBJECTS_UL_items(bpy.types.UIList):
 class ITERATE_OBJECTS_MT_CollectionsMenuActive(bpy.types.Menu):
     bl_idname = "ITERATE_OBJECTS_MT_CollectionsMenuActive"
     bl_label = "Select a Collection for Active"
-    bl_description = "Dropdown to select an existing Collection as Parent Collection of new Iterate Objects\s collections"
+    bl_description = "Dropdown to select an Active Collection to iterate objects to"
     
     # here you specify how they are drawn
     def draw(self, context):
@@ -917,11 +940,11 @@ class ITERATE_OBJECTS_MT_CollectionsMenuActive(bpy.types.Menu):
 class ITERATE_OBJECTS_PT_CustomPanel1(bpy.types.Panel):
     #A Custom Panel in Viewport
     bl_idname = "ITERATE_OBJECTS_PT_CustomPanel1"
-    bl_label = "Iterate Objects"
+    bl_label = "Iterate Model"
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
     #bl_context = "output"
-    bl_category = "Iterate Objects"
+    bl_category = "Iterate Model"
     
     # draw function
     def draw(self, context):
@@ -965,11 +988,11 @@ class ITERATE_OBJECTS_PT_CustomPanel1(bpy.types.Panel):
         if bpy.context.object != None:
             ob_name_1 = bpy.context.object.name
         else:
-            ob_name_1 = "[None Selected]"
+            ob_name_1 = "No Object Selected"
             
-        #for loop
-        ob_name_col_1 = "[New Collection]"
-        #ob_name_iterate = "Iterate"
+        #For Loop Checks if the active Object hasn't been Iterated before
+        ob_name_col_1 = "New Collection"
+        #iterateNew is False if the Object/Collection has been Iterated
         iterateNew = False
         
         for i in enumerate(props.collections):
@@ -979,8 +1002,17 @@ class ITERATE_OBJECTS_PT_CustomPanel1(bpy.types.Panel):
                     #changes iterateNew to 
                     iterateNew = True
                     break
+                    
+        #How many objects you have selected
+        selected_objects = len(bpy.context.selected_objects)
+        
+        #Changes the text from "Object" to "Objects" if more than one object is selected
+        object_text = "Object" if selected_objects <= 1 else "Objects"
+        
         #Changes text from "Iterate" to "Iterate New" if object wasn't found in Iterate Objects
-        ob_name_iterate = "Iterate New" if iterateNew == False else "Iterate"
+        ob_name_iterate = "Iterate %d New %s" % (selected_objects, object_text) if iterateNew == False else "Iterate %d %s" % (selected_objects, object_text)
+        
+        row = col.row(align=True)
         
         row = col.row(align=True)
         row.operator("iterate_objects.duplicating_ops", icon="DUPLICATE", text=ob_name_iterate).type = "DUPLICATE"
@@ -1000,7 +1032,15 @@ class ITERATE_OBJECTS_PT_CustomPanel1(bpy.types.Panel):
         #Duplicate Button BOTTOM
         
         row = col.row(align=True)
-        row.label(text="Iteration Objects (%d):" % len(props.collections))
+        
+        #This is how many collections have both an Object or Collection assigned to them
+        working_collections = 0
+        for i in props.collections:
+            if i.collection != None and i.object != None:
+                working_collections += 1
+                
+        row.label(text="Iterated Objects (%d/%d):" % (working_collections, len(props.collections)) )
+        
         #TOP
         
         split = layout.row(align=False)
@@ -1012,24 +1052,25 @@ class ITERATE_OBJECTS_PT_CustomPanel1(bpy.types.Panel):
         #Side_Bar Operators
         col = split.column(align=True)
         
-        row = col.row(align=True)
-        button = row.operator("iterate_objects.ui_list_ops", text="", icon="TRIA_UP")
+        button = col.operator("iterate_objects.ui_list_ops", text="", icon="TRIA_UP")
         button.type = "UP"
         
-        row = col.row(align=True)
-        button = row.operator("iterate_objects.ui_list_ops", text="", icon="TRIA_DOWN")
+        button = col.operator("iterate_objects.ui_list_ops", text="", icon="TRIA_DOWN")
         button.type = "DOWN"
         
-        row = col.row(align=True)
-        button = row.operator("iterate_objects.ui_list_ops", text="", icon="PANEL_CLOSE")
+        button = col.operator("iterate_objects.ui_list_ops", text="", icon="PANEL_CLOSE")
         button.type = "REMOVE"
         
-        row = col.row(align=True)
-        row.prop(props, "display_icons", text="", icon="OUTLINER_OB_MESH")
+        button = col.operator("iterate_objects.ui_list_ops", text="", icon="RESTRICT_SELECT_OFF")
+        button.type = "SELECT_ACTIVE_UI"
+        #SELECT_ACTIVE_UI
+        
+        col.separator()
+        
+        col.prop(props, "display_icons", text="", icon="OUTLINER_OB_MESH")
         
         #Edit Mode option
-        row = col.row(align=True)
-        row.prop(props, "display_collections", text="", icon="GROUP")
+        col.prop(props, "display_collections", text="", icon="GROUP")
         
         #End of CustomPanel
         
@@ -1116,18 +1157,19 @@ class ITERATE_OBJECTS_PT_Cleaning(bpy.types.Panel):
         col = layout.column(align=False)
         
         row = col.row(align=True)
-        row.operator("iterate_objects.cleaning_ops", icon="TRASH", text="Clean Collections").type = "CLEAN_1"
+        #"Clean Collections"
+        row.operator("iterate_objects.cleaning_ops", icon="TRASH", text="Delete Objects in Iterated Collections").type = "CLEAN_COLLECTION_OBJECTS"
         
         row = col.row(align=True)
-        row.prop(props, "clean_leave", text="Leave")
+        row.prop(props, "clean_leave", text="Leave Objects")
         
         col.separator()
         
-        #row = col.row(align=True)
-        #row.label(text="Cleaning List:")
+        row = col.row(align=True)
+        row.label(text="Cleaning Iteration List:")
         
         row = col.row(align=True)
-        row.operator("iterate_objects.cleaning_ops", icon="TRASH", text="Remove Empty in List").type = "CLEAN_2"
+        row.operator("iterate_objects.cleaning_ops", text="Remove Empty in List").type = "CLEAN_NOT_FOUND"
         
         col.separator()
         
@@ -1154,7 +1196,7 @@ class ITERATE_OBJECTS_PT_Cleaning(bpy.types.Panel):
                 col.separator()
                 
                 row = col.row(align=True)
-                row.operator("iterate_objects.debug", icon="ERROR", text="Delete All").type = "DELETE_NUKE"
+                row.operator("iterate_objects.debug", text="Delete All").type = "DELETE_NUKE"
                 
                 row = col.row(align=True)
                 row.operator("iterate_objects.debug", text="Print Objects/Collections").type = "PRINT_1"
@@ -1295,20 +1337,25 @@ class ITERATE_OBJECTS_Props(bpy.types.PropertyGroup):
     
     list_reverse: bpy.props.EnumProperty(name="Display Mode", items= [("DESCENDING", "Descending", listDesc2[0], "SORT_DESC", 0), ("ASCENDING", "Ascending", listDesc2[1], "SORT_ASC", 1)], description="Display Mode of List", default="DESCENDING", update=ListOrderUpdate)
     
-    display_collections: bpy.props.BoolProperty(name="Display Collections in List", description="Display Iterate Object collections where duplicates are sent.", default=True)
+    display_collections: bpy.props.BoolProperty(name="Display Collections in List", description="Iterate Object Collections where duplicates are sent.", default=True)
     
     display_icons: bpy.props.BoolProperty(name="Display Icons", description="Display icons of objects in the list", default=True)
     
     index_to_new: bpy.props.BoolProperty(name="Updates Active List Index to New Iteration Object", description="Sets Active list index to New Iteration Object that was added.", default=True)
     
-    debug_mode: bpy.props.BoolProperty(name="Display Debug Operators", description="To aid in Debugging Operators. Displayed in \"Display Settings\"", default=False)
+    debug_mode: bpy.props.BoolProperty(name="Display Debug Operators", description="To aid in Debugging Operators. Displayed in \"Display Settings\"", default=True)
     
     debug_mode_arrow: bpy.props.BoolProperty(name="Debug Mode Dropdown Arrow", description="To display Debug Mode", default=True)
     
     #For Iterate Collection Settings and Operators
     
+    error_object: bpy.props.StringProperty(name="Collection Not Found", description="Collection has been deleted or doesn\'t exist", default="[No Object]", options={'HIDDEN'})
+    
+    error_collection: bpy.props.StringProperty(name="Collection Not Found", description="Collection has been deleted or doesn\'t exist", default="[No Collection]", options={'HIDDEN'})
+    
     #hide_types_last
     #hide_last: bpy.props.BoolProperty(name="Exclude Recent Iteration", description="When using the operators for toggling \"all objects\"", default=False)
+    
     
 #Classes that are registered
 classes = (
