@@ -51,6 +51,7 @@ def objectIcon(object):
     
     icon = "QUESTION"
     
+    #schema: "Object Type": "Icon Name"
     dictionary = {
         "MESH": "OUTLINER_OB_MESH",
         "EMPTY": "EMPTY",
@@ -809,9 +810,20 @@ class ITERATE_OBJECTS_OT_UIOperators(bpy.types.Operator):
                         
                 else:
                     props.collections.remove(props.IM_ULIndex)
-            #Note: This only removes the props.collections, not the actual collections or objects
+            #Note: This only removes the props.collections, not the actual collections or 
+            """
             elif self.sub == "ALL":
                 props.collections.clear()
+            """
+                
+                
+        #Note: This only removes the props.collections, not the actual collections or objects
+        elif self.type == "REMOVE_UI_ALL":
+            props.collections.clear()
+            
+            reportString = "Removed all UI List elements. (Objects in Scene unaffected)" #% (active_object.name)
+            
+            self.report({'INFO'}, reportString)
                 
         elif self.type == "SELECT_ACTIVE_UI":
             active_object = bpy.context.active_object
@@ -825,7 +837,7 @@ class ITERATE_OBJECTS_OT_UIOperators(bpy.types.Operator):
                         break
                         
                 if found == False:
-                    reportString = "%s not in Iteration List" % (active_object.name)
+                    reportString = "\"%s\" not in Iteration List" % (active_object.name)
                     
                     self.report({'INFO'}, reportString)
             else:
@@ -910,7 +922,7 @@ class ITERATE_OBJECTS_UL_items(bpy.types.UIList):
 class ITERATE_OBJECTS_MT_CollectionsMenuActive(bpy.types.Menu):
     bl_idname = "ITERATE_OBJECTS_MT_CollectionsMenuActive"
     bl_label = "Select a Collection for Active"
-    bl_description = "Dropdown to select an Active Collection to iterate objects to"
+    bl_description = "Select an Parent Collection to create collections to send object iteration duplicates"
     
     # here you specify how they are drawn
     def draw(self, context):
@@ -1173,6 +1185,7 @@ class ITERATE_OBJECTS_PT_Cleaning(bpy.types.Panel):
         
         col.separator()
         
+        """
         if props.debug_mode == True:
             #Debug Operators
             row = col.row(align=True)
@@ -1183,7 +1196,13 @@ class ITERATE_OBJECTS_PT_Cleaning(bpy.types.Panel):
             if props.debug_mode_arrow == True:
                 
                 row = col.row(align=True)
+                row.label(text="Print")
+                
+                row = col.row(align=True)
                 row.operator("iterate_objects.debug", text="Print Different").type = "PRINT_DIFFERENT_1"
+                
+                row = col.row(align=True)
+                row.operator("iterate_objects.debug", text="Print Objects/Collections").type = "PRINT_1"
                 
                 #row = col.row(align=True)
                 #row.operator("iterate_objects.debug", text="Delete Test").type = "CLEAN"
@@ -1191,15 +1210,93 @@ class ITERATE_OBJECTS_PT_Cleaning(bpy.types.Panel):
                 col.separator()
                 
                 row = col.row(align=True)
+                row.label(text="Add")
+                
+                row = col.row(align=True)
                 row.operator("iterate_objects.debug", text="Add 3 Objects").type = "TESTING"
                 
-                col.separator()
+                #col.separator()
                 
                 row = col.row(align=True)
-                row.operator("iterate_objects.debug", text="Delete All").type = "DELETE_NUKE"
+                
+                row.label(text="Delete")
                 
                 row = col.row(align=True)
-                row.operator("iterate_objects.debug", text="Print Objects/Collections").type = "PRINT_1"
+                #button = row.operator("iterate_objects.debug", text="Delete All")
+                #button.type = "REMOVE_UI_ALL"
+                row.operator("iterate_objects.ui_list_ops", text="All UI Elements").type = "REMOVE_UI_ALL"
+                #button.sub = "ALL"
+                
+                row = col.row(align=True)
+                row.operator("iterate_objects.debug", text="All Objects & UI Elements").type = "DELETE_NUKE"
+                """
+                
+class ITERATE_OBJECTS_PT_DebugPanel(bpy.types.Panel):
+    bl_label = "Cleaning Operators"
+    bl_parent_id = "ITERATE_OBJECTS_PT_CustomPanel1"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = 'UI'
+    #bl_context = "output"
+    bl_category = "Iterate Model"
+    
+    @classmethod
+    def poll(cls, context):
+        scene = bpy.context.scene
+        props = scene.IM_Props
+        
+        #return props.collection_parent is not None and props.collection_active is not None
+        return props.debug_mode == True
+    
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        data = bpy.data
+        props = scene.IM_Props
+        
+        col = layout.column(align=False)
+        
+        row = col.row(align=True)
+        
+        #Dropdown Arrow Boolean
+        row.prop(props, "debug_mode_arrow", text="", icon="DOWNARROW_HLT")
+        row.label(text="Debug Operators:")
+        
+        #if props.debug_mode_arrow == True:
+        
+        row = col.row(align=True)
+        row.label(text="Print")
+        
+        row = col.row(align=True)
+        row.operator("iterate_objects.debug", text="Print Different").type = "PRINT_DIFFERENT_1"
+        
+        row = col.row(align=True)
+        row.operator("iterate_objects.debug", text="Print Objects/Collections").type = "PRINT_1"
+        
+        #row = col.row(align=True)
+        #row.operator("iterate_objects.debug", text="Delete Test").type = "CLEAN"
+        
+        col.separator()
+        
+        row = col.row(align=True)
+        row.label(text="Add")
+        
+        row = col.row(align=True)
+        row.operator("iterate_objects.debug", text="Add 3 Objects").type = "TESTING"
+        
+        #col.separator()
+        
+        row = col.row(align=True)
+        
+        row.label(text="Delete")
+        
+        row = col.row(align=True)
+        #button = row.operator("iterate_objects.debug", text="Delete All")
+        #button.type = "REMOVE_UI_ALL"
+        row.operator("iterate_objects.ui_list_ops", text="All UI Elements").type = "REMOVE_UI_ALL"
+        #button.sub = "ALL"
+        
+        row = col.row(align=True)
+        row.operator("iterate_objects.debug", text="All Objects & UI Elements").type = "DELETE_NUKE"
             
 
 def ListOrderUpdate(self, context):
@@ -1363,6 +1460,7 @@ classes = (
     ITERATE_OBJECTS_OT_GroupOperators,
     ITERATE_OBJECTS_OT_Duplicate,
     ITERATE_OBJECTS_OT_Cleaning,
+    ITERATE_OBJECTS_PT_DebugPanel,
     ITERATE_OBJECTS_OT_Removing,
     
     ITERATE_OBJECTS_OT_Debugging,
