@@ -21,12 +21,12 @@
 # ##### END GPL LICENSE BLOCK #####
 
 bl_info = {
-    "name": "Iterate Objects",
+    "name": "Iterate Object",
     "description": "Workflow Addon for easy duplication and organization of objects into collections, to work as \"backups\" for destructive modeling.",
     "author": "Juan Cardenas (JohnGDDR5)",
     "version": (1, 0), 
     "blender": (2, 80, 0),
-    "location": "3D View > Side Bar > Iterate Objects",
+    "location": "3D View > Side Bar > Iterate Object",
     "warning": "In Development",
     "support": "COMMUNITY",
     "category": "Scene"
@@ -888,11 +888,11 @@ class ITERATE_OBJECTS_MT_menu_select_collection(bpy.types.Menu):
 class ITERATE_OBJECTS_PT_custom_panel1(bpy.types.Panel):
     #A Custom Panel in Viewport
     bl_idname = "ITERATE_OBJECTS_PT_custom_panel1"
-    bl_label = "Iterate Model"
+    bl_label = "Iterate Object"
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
     #bl_context = "output"
-    bl_category = "Iterate Model"
+    bl_category = "Iterate Object"
     
     collectionOOF: bpy.props.PointerProperty(name="Added Collections to List", type=bpy.types.Collection)
     
@@ -1034,7 +1034,7 @@ class ITERATE_OBJECTS_PT_display_settings(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
     #bl_context = "output"
-    bl_category = "Iterate Model"
+    bl_category = "Iterate Object"
     
     def draw(self, context):
         layout = self.layout
@@ -1099,7 +1099,7 @@ class ITERATE_OBJECTS_PT_cleaning(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
     #bl_context = "output"
-    bl_category = "Iterate Model"
+    bl_category = "Iterate Object"
     
     def draw(self, context):
         layout = self.layout
@@ -1132,7 +1132,7 @@ class ITERATE_OBJECTS_PT_debug_panel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
     #bl_context = "output"
-    bl_category = "Iterate Model"
+    bl_category = "Iterate Object"
     
     @classmethod
     def poll(cls, context):
@@ -1259,7 +1259,7 @@ class ITERATE_OBJECTS_preferences(bpy.types.AddonPreferences):
     #bl_idname = "iterate_objects_addon_b2_80_v1_0"
     bl_idname = __name__
     # here you define the addons customizable props
-    ui_tab: bpy.props.EnumProperty(name="Enum", items= [("GENERAL", "General", "General Options"), ("ABOUT", "About", "About Author & Where to Support")], description="Iterate Model UI Tabs", default="GENERAL")
+    ui_tab: bpy.props.EnumProperty(name="Enum", items= [("GENERAL", "General", "General Options"), ("ABOUT", "About", "About Author & Where to Support")], description="Iterate Object UI Tabs", default="GENERAL")
     
     def draw(self, context):
         layout = self.layout
