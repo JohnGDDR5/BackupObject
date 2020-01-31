@@ -224,11 +224,14 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
                     
                     #If object wasn't found inside props.collections as .object
                     if existingCol == None:
+                        """
                         #Checks how you want the new Collection name for new Iteration Object to be
                         if props.group_name_use == True:
                             new_group_name = i[1].name
                         else:
                             new_group_name = props.group_name
+                        """
+                        new_group_name = props.group_name
                         
                         colNew2 = bpy.data.collections.new(new_group_name)
                         #Links colNew2 to collection_active
@@ -674,7 +677,7 @@ class BACKUP_OBJECTS_OT_debugging(bpy.types.Operator):
 class BACKUP_OBJECTS_OT_ui_operators_move(bpy.types.Operator):
     bl_idname = "backup_objects.ui_ops_move"
     bl_label = "List Operators"
-    bl_description = "Operators for moving and deleting list rows"
+    bl_description = "Operators for moving rows Up, Down and Deleting"
     bl_options = {'UNDO',}
     type: bpy.props.StringProperty(default="DEFAULT")
     sub: bpy.props.StringProperty(default="DEFAULT")
@@ -852,7 +855,17 @@ class BACKUP_OBJECTS_UL_items(bpy.types.UIList):
                 else:
                     obItems = 0
                 
-                info = '%d. (%d)' % (index+1, obItems)#, obName, obItems)
+                #info = "%d. (%d)" % (index+1, obItems)
+                info = ""
+                #info = "%d. (%d)" % (index+1, obItems)
+                if props.display_index == True:
+                    if props.display_object_count == True:
+                        info += "%d. " % (index+1)
+                    else:
+                        info += "%d" % (index+1)
+                    
+                if props.display_object_count == True:
+                    info += "(%d)" % (obItems)
                 #bpy.context.scene.BO_Props.collections.add()
                 
                 #Displays icon of objects in list
@@ -1060,13 +1073,14 @@ class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel):
         button.type = "SELECT_ACTIVE_UI"
         #SELECT_ACTIVE_UI
         
+        """
         col.separator()
         
         col.prop(props, "display_icons", text="", icon="OUTLINER_OB_MESH")
         
         #Edit Mode option
         col.prop(props, "display_collections", text="", icon="GROUP")
-        
+        """
         #End of CustomPanel
         
 
@@ -1113,28 +1127,29 @@ class BACKUP_OBJECTS_PT_display_settings(bpy.types.Panel):
         row.prop(props, "display_collections", text="Collections", icon="GROUP")
         row.prop(props, "display_icons", text="Icons", icon="OUTLINER_OB_MESH")
         
+        row = col.row(align=True)
+        row.prop(props, "display_index", text="Index", icon="LINENUMBERS_ON")
+        row.prop(props, "display_object_count", text="Backups", icon="OBJECT_DATAMODE")
+        
         col.separator()
         
         row = col.row(align=True)
         
-        row.label(text="New Collection")
+        row.label(text="New Parent Collection Name")
         
         row = col.row(align=True)
-
-        row.prop(props, "index_to_new", text="Update Active List Index", icon="NONE")
+        row.prop(props, "group_name", text="", icon="NONE")
         
-        row = col.row(align=True)
-
-        row.prop(props, "group_name_use", text="Use Object Name", icon="NONE")
+        col.separator()
         
         row = col.row(align=True)
         
-        #Grays row out with .active, but you can still change props inside it.
-        row.active = not bool(props.group_name_use)
+        row.label(text="List Row")
         
-        row.prop(props, "group_name", text="New Name", icon="NONE")
+        row = col.row(align=True)
+        row.prop(props, "index_to_new", text="Update Active List Row", icon="NONE")
         
-            
+        
 class BACKUP_OBJECTS_PT_cleaning(bpy.types.Panel):
     bl_label = "Cleaning Operators"
     bl_parent_id = "BACKUP_OBJECTS_PT_custom_panel1"
@@ -1152,8 +1167,11 @@ class BACKUP_OBJECTS_PT_cleaning(bpy.types.Panel):
         col = layout.column(align=False)
         
         row = col.row(align=True)
+        row.label(text="Backup Collections")
+        
+        row = col.row(align=True)
         #"Clean Collections"
-        row.operator("backup_objects.cleaning_ops", icon="TRASH", text="Delete Objects in Backup Collections").type = "CLEAN_COLLECTION_OBJECTS"
+        row.operator("backup_objects.cleaning_ops", icon="TRASH", text="Delete Objects").type = "CLEAN_COLLECTION_OBJECTS"
         
         row = col.row(align=True)
         row.prop(props, "clean_leave", text="Leave Recent Objects")
@@ -1161,7 +1179,7 @@ class BACKUP_OBJECTS_PT_cleaning(bpy.types.Panel):
         col.separator()
         
         row = col.row(align=True)
-        row.label(text="Cleaning Backup UI List:")
+        row.label(text="Cleaning Backup UI List")
         
         row = col.row(align=True)
         row.operator("backup_objects.cleaning_ops", text="Remove Empty in UI List").type = "CLEAN_NOT_FOUND"
@@ -1360,7 +1378,7 @@ class BACKUP_OBJECTS_props(bpy.types.PropertyGroup):
     #Dropdown for Iterate Display
     dropdown_1: bpy.props.BoolProperty(name="Dropdown", description="Show Object of Backup Object", default=False)
     
-    group_name_use: bpy.props.BoolProperty(name="Use Object Name for New Collection", description="Use the Object\'s name for the New Collection when creating a new Iteration Object", default=True)
+    #group_name_use: bpy.props.BoolProperty(name="Use Object Name for New Collection", description="Use the Object\'s name for the New Collection when creating a new Iteration Object", default=True)
     
     group_name: bpy.props.StringProperty(name="New Collection Name", description="Name used when creating a new collection for Active", default="Group")
     
@@ -1375,7 +1393,11 @@ class BACKUP_OBJECTS_props(bpy.types.PropertyGroup):
     
     display_icons: bpy.props.BoolProperty(name="Display Icons", description="Display icons of objects in the list", default=True)
     
-    index_to_new: bpy.props.BoolProperty(name="Updates Active List Index to New Iteration Object", description="Sets Active list index to New Iteration Object that was added.", default=True)
+    display_index: bpy.props.BoolProperty(name="Display Index", description="Display index of list row", default=True)
+    
+    display_object_count: bpy.props.BoolProperty(name="Display Backup Object Count", description="Display amount of backed up objects in Backup Collection", default=True)
+    
+    index_to_new: bpy.props.BoolProperty(name="Updates Active List Row", description="Sets Active list row to newest backup object that was added.", default=True)
     
     debug_mode: bpy.props.BoolProperty(name="Enable Debug Operators", description="Enables a panel with Debugging operators for developers", default=True)
     
