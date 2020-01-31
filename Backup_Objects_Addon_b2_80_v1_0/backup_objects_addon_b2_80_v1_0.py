@@ -83,7 +83,7 @@ def objectIcon(object):
 class BACKUP_OBJECTS_OT_select_collection(bpy.types.Operator):
     bl_idname = "backup_objects.select_collection"
     bl_label = "Select Collection"
-    bl_description = "Set collection as Parent or Active collection"
+    bl_description = "Sets Parent collection for Backups"
     bl_options = {'UNDO',}
     type: bpy.props.StringProperty(default="DEFAULT")
     index: bpy.props.IntProperty(default=0, min=-1)
@@ -102,7 +102,7 @@ class BACKUP_OBJECTS_OT_select_collection(bpy.types.Operator):
 class BACKUP_OBJECTS_OT_group_operators(bpy.types.Operator):
     bl_idname = "backup_objects.collection_ops"
     bl_label = "Create a new Collection"
-    bl_description = "Creates a new Parent Collection where new Iteration Object collections are created."
+    bl_description = "Creates a new Parent Collection where new Backup collections for Objects are created."
     bl_options = {'UNDO',}
     type: bpy.props.StringProperty(default="DEFAULT")
     index: bpy.props.IntProperty(default=0, min=0)
@@ -133,8 +133,8 @@ class BACKUP_OBJECTS_OT_group_operators(bpy.types.Operator):
         
 class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
     bl_idname = "backup_objects.duplicating_ops"
-    bl_label = "Duplicates active objects"
-    bl_description = "Duplicates active objects and sends them to the Parent Collection"
+    bl_label = "Backups active objects."
+    bl_description = "Duplicates active objects and sends their collection in the Parent Collection"
     bl_options = {'UNDO',}
     
     type: bpy.props.StringProperty(default="DEFAULT")
@@ -146,7 +146,8 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
         props = scene.BO_Props
         
         #return props.collection_parent is not None and props.collection_active is not None
-        return True#props.collection_active is not None
+        #return True#props.collection_active is not None
+        return context.active_object is not None #and len(context.selected_objects) > 0
     
     def execute(self, context):
         scene = bpy.context.scene
@@ -670,8 +671,8 @@ class BACKUP_OBJECTS_OT_debugging(bpy.types.Operator):
         
         return {'FINISHED'}
         
-class BACKUP_OBJECTS_OT_ui_operators(bpy.types.Operator):
-    bl_idname = "backup_objects.ui_list_ops"
+class BACKUP_OBJECTS_OT_ui_operators_move(bpy.types.Operator):
+    bl_idname = "backup_objects.ui_ops_move"
     bl_label = "List Operators"
     bl_description = "Operators for moving and deleting list rows"
     bl_options = {'UNDO',}
@@ -787,7 +788,48 @@ class BACKUP_OBJECTS_OT_ui_operators(bpy.types.Operator):
         self.sub == "DEFAULT"
         
         return {'FINISHED'}
+        
+class BACKUP_OBJECTS_OT_ui_operators_select(bpy.types.Operator):
+    bl_idname = "backup_objects.ui_ops_select"
+    bl_label = "Select from Active Object"
+    bl_description = "Selects list UI element of Active Object"
+    bl_options = {'UNDO',}
+    type: bpy.props.StringProperty(default="DEFAULT")
+    sub: bpy.props.StringProperty(default="DEFAULT")
+    #index: bpy.props.IntProperty(default=0, min=0)
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.BO_Props
+        active = props.BO_ULIndex
+        
+        if self.type == "SELECT_ACTIVE_UI":
+            active_object = bpy.context.active_object
+            if active_object != None:
+                found = False
+                
+                for i in enumerate(props.collections):
+                    if active_object == i[1].object:
+                        props.BO_ULIndex = i[0]
+                        found = True
+                        break
+                        
+                if found == False:
+                    reportString = "\"%s\" not in Iteration List" % (active_object.name)
+                    
+                    self.report({'INFO'}, reportString)
+            else:
+                reportString = "No Active Object"
+                    
+                self.report({'INFO'}, reportString)
             
+        
+        #Resets self props into "DEFAULT"
+        self.type == "DEFAULT"
+        self.sub == "DEFAULT"
+        
+        return {'FINISHED'}
+        
 
 class BACKUP_OBJECTS_UL_items(bpy.types.UIList):
     
@@ -1005,16 +1047,16 @@ class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel):
         #Side_Bar Operators
         col = split.column(align=True)
         
-        button = col.operator("backup_objects.ui_list_ops", text="", icon="TRIA_UP")
+        button = col.operator("backup_objects.ui_ops_move", text="", icon="TRIA_UP")
         button.type = "UP"
         
-        button = col.operator("backup_objects.ui_list_ops", text="", icon="TRIA_DOWN")
+        button = col.operator("backup_objects.ui_ops_move", text="", icon="TRIA_DOWN")
         button.type = "DOWN"
         
-        button = col.operator("backup_objects.ui_list_ops", text="", icon="PANEL_CLOSE")
+        button = col.operator("backup_objects.ui_ops_move", text="", icon="PANEL_CLOSE")
         button.type = "REMOVE"
         
-        button = col.operator("backup_objects.ui_list_ops", text="", icon="RESTRICT_SELECT_OFF")
+        button = col.operator("backup_objects.ui_ops_select", text="", icon="RESTRICT_SELECT_OFF")
         button.type = "SELECT_ACTIVE_UI"
         #SELECT_ACTIVE_UI
         
@@ -1187,7 +1229,7 @@ class BACKUP_OBJECTS_PT_debug_panel(bpy.types.Panel):
         row = col.row(align=True)
         #button = row.operator("backup_objects.debug", text="Delete All")
         #button.type = "REMOVE_UI_ALL"
-        row.operator("backup_objects.ui_list_ops", text="All UI Elements").type = "REMOVE_UI_ALL"
+        row.operator("backup_objects.ui_ops_move", text="All UI Elements").type = "REMOVE_UI_ALL"
         #button.sub = "ALL"
         
         row = col.row(align=True)
@@ -1358,7 +1400,8 @@ classes = (
     BACKUP_OBJECTS_OT_removing,
     
     BACKUP_OBJECTS_OT_debugging,
-    BACKUP_OBJECTS_OT_ui_operators,
+    BACKUP_OBJECTS_OT_ui_operators_move,
+    BACKUP_OBJECTS_OT_ui_operators_select,
     
     BACKUP_OBJECTS_UL_items,
     BACKUP_OBJECTS_MT_menu_select_collection,
