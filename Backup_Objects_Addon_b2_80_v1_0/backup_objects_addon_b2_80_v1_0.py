@@ -258,6 +258,9 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
                         #Hides Collection
                         propsCol.collection.hide_viewport = True
                         
+                        #Hides Collection from being rendered
+                        propsCol.collection.hide_render  = True
+                        
                         existingCol = propsCol
                     
                     #Unselects duplicated object
