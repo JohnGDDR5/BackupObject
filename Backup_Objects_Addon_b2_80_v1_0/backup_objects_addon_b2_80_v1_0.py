@@ -231,7 +231,8 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
                         else:
                             new_group_name = props.group_name
                         """
-                        new_group_name = props.group_name
+                        #new_group_name = props.group_name
+                        new_group_name = i[1].name
                         
                         colNew2 = bpy.data.collections.new(new_group_name)
                         #Links colNew2 to collection_active
