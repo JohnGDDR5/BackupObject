@@ -175,6 +175,7 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
                 
                 bpy.context.scene.collection.children.link(colNew)
             
+            #Requires some selected objects to do anything
             if len(bpy.context.selected_objects) > 0:
                 
                 previous_active = bpy.context.active_object
@@ -798,7 +799,7 @@ class BACKUP_OBJECTS_OT_ui_operators_move(bpy.types.Operator):
         
 class BACKUP_OBJECTS_OT_ui_operators_select(bpy.types.Operator):
     bl_idname = "backup_objects.ui_ops_select"
-    bl_label = "Select from Active Object"
+    bl_label = "Select List from Active Object"
     bl_description = "Selects list UI element of Active Object"
     bl_options = {'UNDO',}
     type: bpy.props.StringProperty(default="DEFAULT")
@@ -951,7 +952,7 @@ class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
     #bl_context = "output"
-    bl_category = "Backup Object"
+    bl_category = "Backup"
     
     collectionOOF: bpy.props.PointerProperty(name="Added Collections to List", type=bpy.types.Collection)
     
@@ -1094,7 +1095,7 @@ class BACKUP_OBJECTS_PT_display_settings(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
     #bl_context = "output"
-    bl_category = "Backup Object"
+    bl_category = "Backup"
     
     def draw(self, context):
         layout = self.layout
@@ -1153,6 +1154,38 @@ class BACKUP_OBJECTS_PT_display_settings(bpy.types.Panel):
         row = col.row(align=True)
         row.prop(props, "index_to_new", text="Update Active List Row", icon="NONE")
         
+class BACKUP_OBJECTS_PT_backup_settings(bpy.types.Panel):
+    bl_label = "Backup Settings"
+    bl_parent_id = "BACKUP_OBJECTS_PT_custom_panel1"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = 'UI'
+    #bl_context = "output"
+    bl_category = "Backup"
+    
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        data = bpy.data
+        props = scene.BO_Props
+        
+        #collection_active: 
+        #collections:
+        
+        col = layout.column()
+        
+        row = col.row(align=True)
+        row.label(text="Only Active Object")
+        
+        row = col.row(align=True)
+        row.prop(scene.BO_Props, "only_active", expand=True)
+        
+        row = col.row(align=True)
+        row.label(text="Exclude Armature")
+        
+        row = col.row(align=True)
+        row.prop(props, "exclude_armature", expand=True)#, text="X")
+        
+        
         
 class BACKUP_OBJECTS_PT_cleaning(bpy.types.Panel):
     bl_label = "Cleaning Operators"
@@ -1160,7 +1193,7 @@ class BACKUP_OBJECTS_PT_cleaning(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
     #bl_context = "output"
-    bl_category = "Backup Object"
+    bl_category = "Backup"
     
     def draw(self, context):
         layout = self.layout
@@ -1196,7 +1229,7 @@ class BACKUP_OBJECTS_PT_debug_panel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
     #bl_context = "output"
-    bl_category = "Backup Object"
+    bl_category = "Backup"
     
     @classmethod
     def poll(cls, context):
@@ -1413,6 +1446,11 @@ class BACKUP_OBJECTS_props(bpy.types.PropertyGroup):
     
     error_collection: bpy.props.StringProperty(name="Collection Not Found", description="Collection has been deleted or doesn\'t exist", default="[No Collection]", options={'HIDDEN'})
     
+    #backup settings
+    only_active: bpy.props.BoolProperty(name="Backup Only Active Object", description="Only the active object will be backed up", default=False)
+    
+    exclude_armature: bpy.props.BoolProperty(name="Exclude Armature Backups", description="Selected Armatures won\'t be backed up when in Weight Paint mode. To prevent unnecessary backups of an Armature when weight painting an object.", default=True)
+    
     #hide_types_last
     #hide_last: bpy.props.BoolProperty(name="Exclude Recent Iteration", description="When using the operators for toggling \"all objects\"", default=False)
     
@@ -1434,6 +1472,7 @@ classes = (
     
     BACKUP_OBJECTS_PT_custom_panel1,
     BACKUP_OBJECTS_PT_display_settings,
+    BACKUP_OBJECTS_PT_backup_settings,
     BACKUP_OBJECTS_PT_cleaning,
     BACKUP_OBJECTS_PT_debug_panel,
     
