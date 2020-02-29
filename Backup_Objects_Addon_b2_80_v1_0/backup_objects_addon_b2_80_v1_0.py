@@ -180,7 +180,26 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
                 
                 previous_active = bpy.context.active_object
                 
+                ##This is to not Backup Armatures when in Weight Paint Mode - TOP
                 previous_selected = bpy.context.selected_objects
+                previous_selected_unselected = []
+                
+                #Checks if you don't want to Backup Armatures when Weight Painting an Object
+                if props.exclude_armature == True and prev_mode == "WEIGHT_PAINT" :
+                    
+                    for i in previous_selected:
+                        if i.type == "ARMATURE":
+                            #previous_selected[i].select_set(False)
+                            i.select_set(False)
+                            previous_selected_unselected.append(i)
+                            #previous_selected.remove(i)
+                            
+                    #Since there are less selected objects, it needs to be reassigned
+                    previous_selected = bpy.context.selected_objects
+                            
+                
+                ##BOTTOM
+                
                 
                 #Duplicates selected objects in previous_selected
                 bpy.ops.object.duplicate_move(OBJECT_OT_duplicate={"linked":False, "mode":'TRANSLATION'}, TRANSFORM_OT_translate={"value":(0.0, 0.0, 0.0), "orient_type":'GLOBAL'})
@@ -218,10 +237,10 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
                             #j[1].duplicates += 1
                             j[1].name = j[1].collection.name
                             
-                            print("For: 1")
+                            #print("For: 1")
                             break
                     
-                    print("existingCol: %s" % (str(existingCol)))
+                    ##print("existingCol: %s" % (str(existingCol)))
                     
                     #If object wasn't found inside props.collections as .object
                     if existingCol == None:
@@ -269,6 +288,10 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
                     ob.select_set(False)
                     #Selects previously selected object
                     previous_selected[i[0]].select_set(True)
+                    
+                #Reselects Previously Unselected Objects that weren't Backedup
+                for i in previous_selected_unselected:
+                    i.select_set(True)
                     
                 #selects previously active object
                 previous_active.select_set(True)
@@ -336,8 +359,16 @@ class BACKUP_OBJECTS_OT_cleaning(bpy.types.Operator):
                     else:
                         ob_name = "[No Object]"
                         
-                    #Everyithing but the last # of objects from props.clean_leave integer
-                    list_rev = reversed(list(enumerate(i[1].collection.objects[:-props.clean_leave])))
+                    ##
+                    last_slice_index = -int(props.clean_leave)
+                    
+                    #If last slice index is 0 and not negative, then it won't work
+                    if last_slice_index == 0:
+                        last_slice_index = len(i[1].collection.objects)
+                        
+                    #Everything but the last # of objects from props.clean_leave integer
+                    list_rev = reversed(list(enumerate(i[1].collection.objects[:last_slice_index]) ))
+                    ##
                     
                     len_prev = len(i[1].collection.objects)
                     
@@ -1173,17 +1204,19 @@ class BACKUP_OBJECTS_PT_backup_settings(bpy.types.Panel):
         
         col = layout.column()
         
-        row = col.row(align=True)
-        row.label(text="Only Active Object")
+        #row = col.row(align=True)
+        #row.label(text="Only Active Object")
         
         row = col.row(align=True)
         row.prop(scene.BO_Props, "only_active", expand=True)
         
-        row = col.row(align=True)
-        row.label(text="Exclude Armature")
+        col.separator()
         
         row = col.row(align=True)
-        row.prop(props, "exclude_armature", expand=True)#, text="X")
+        row.label(text="In Weight Paint")
+        
+        row = col.row(align=True)
+        row.prop(props, "exclude_armature", expand=True)#, text="")
         
         
         
