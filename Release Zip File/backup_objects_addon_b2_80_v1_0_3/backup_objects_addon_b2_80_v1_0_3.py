@@ -577,9 +577,15 @@ class BACKUP_OBJECTS_OT_debugging(bpy.types.Operator):
                 print(reportString)
                 self.report({'INFO'}, reportString)
             else:
+                removedCol = 0
+                
                 #Removes scene.BO_Props.collections
                 for i in enumerate(reversed(props.collections)):
                     props.collections.remove(len(props.collections)-1)
+                    
+                    removedCol += 1
+                    
+                reportString = "Removed: %d Collection Groups" % (removedCol)
                 
             print(reportString)
             self.report({'INFO'}, reportString)
