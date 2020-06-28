@@ -19,6 +19,7 @@ from . backup_objects_addon_b2_80_v1_0_4 import (
     BACKUP_OBJECTS_OT_select_collection,
     BACKUP_OBJECTS_OT_group_operators,
     BACKUP_OBJECTS_OT_duplicate,
+    BACKUP_OBJECTS_OT_duplicate_all,
     BACKUP_OBJECTS_OT_cleaning,
     BACKUP_OBJECTS_OT_removing,
     
@@ -48,6 +49,7 @@ classes = (
     BACKUP_OBJECTS_OT_select_collection,
     BACKUP_OBJECTS_OT_group_operators,
     BACKUP_OBJECTS_OT_duplicate,
+    BACKUP_OBJECTS_OT_duplicate_all,
     BACKUP_OBJECTS_OT_cleaning,
     BACKUP_OBJECTS_OT_removing,
     

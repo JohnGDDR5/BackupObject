@@ -60,7 +60,7 @@ class BACKUP_OBJECTS_OT_select_collection(bpy.types.Operator):
         props = scene.BO_Props
                 
         if self.type == "SELECT_ACTIVE":
-            props.collection_active = bpy.data.collections[self.index]
+            props.master_collection = bpy.data.collections[self.index]
             
         self.type == "DEFAULT"
         
@@ -81,9 +81,9 @@ class BACKUP_OBJECTS_OT_group_operators(bpy.types.Operator):
         #New Collection Group inside Parent Collection and set as Active Collection
         if self.type == "NEW_GROUP":
             
-            colNew = bpy.data.collections.new(props.group_name)
-            #Links colNew2 to collection_active
-            props.collection_active = colNew
+            colNew = bpy.data.collections.new(props.new_collection_name)
+            #Links colNew2 to master_collection
+            props.master_collection = colNew
             
             #Links new collection to Master_Collection
             bpy.context.scene.collection.children.link(colNew)
@@ -129,11 +129,11 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
             if prev_mode != "OBJECT":
                 bpy.ops.object.mode_set(mode="OBJECT")
                 
-            # If there is no collection in collection_active, create one
-            if props.collection_active is None:
-                colNew = bpy.data.collections.new(props.group_name)
-                #Sets collection_active as colNew
-                props.collection_active = colNew
+            # If there is no collection in master_collection, create one
+            if props.master_collection is None:
+                colNew = bpy.data.collections.new(props.new_collection_name)
+                #Sets master_collection as colNew
+                props.master_collection = colNew
                 
                 bpy.context.scene.collection.children.link(colNew)
             
@@ -180,6 +180,8 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
                 # Duplicates selected objects in previous_selected
                 bpy.ops.object.duplicate_move(OBJECT_OT_duplicate={"linked":False, "mode":'TRANSLATION'}, TRANSFORM_OT_translate={"value":(0.0, 0.0, 0.0), "orient_type":'GLOBAL'})
                 
+                total_objects_backed = len(bpy.context.selected_objects)
+
                 #Iterates through all selected objects
                 for i in enumerate(previous_selected):
                     existingCol = None
@@ -206,7 +208,7 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
                                 #Hides new collection
                                 colNew.hide_viewport = True
                                 
-                                props.collection_active.children.link(colNew)
+                                props.master_collection.children.link(colNew)
                             
                             #Links duplicated object to existing collection
                             j[1].collection.objects.link(ob)
@@ -220,19 +222,12 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
                     
                     #If object wasn't found inside props.collections as .object
                     if existingCol == None:
-                        """
-                        #Checks how you want the new Collection name for new Iteration Object to be
-                        if props.group_name_use == True:
-                            new_group_name = i[1].name
-                        else:
-                            new_group_name = props.group_name
-                        """
-                        #new_group_name = props.group_name
+                        #new_group_name = props.new_collection_name
                         new_group_name = i[1].name
                         
                         colNew2 = bpy.data.collections.new(new_group_name)
-                        #Links colNew2 to collection_active
-                        props.collection_active.children.link(colNew2)
+                        #Links colNew2 to master_collection
+                        props.master_collection.children.link(colNew2)
                         
                         #Links duplicate to colNew2 collection
                         colNew2.objects.link(ob)
@@ -273,11 +268,13 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
                 previous_active.select_set(True)
                 #Sets previously active object as active
                 bpy.context.view_layer.objects.active = previous_active
-                    
+                
+                # String Report
+                report_objects = "Objects" if total_objects_backed > 1 else "Object"
+                self.report({'INFO'}, "Backed %d %s" % (total_objects_backed, report_objects) )
             else:
                 reportString = "No Objects Selected. 0 Objects Duplicated"
                 
-                #print(reportString)
                 self.report({'INFO'}, reportString)
             
             #Calls the update function ListOrderUpdate to change locations of props.collections
@@ -293,6 +290,204 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator):
             
             #Changes the Mode of the active object back to its previous mode.
             bpy.ops.object.mode_set(mode=prev_mode)
+                        
+        self.type == "DEFAULT"
+        
+        return {'FINISHED'}
+
+class BACKUP_OBJECTS_OT_duplicate_all(bpy.types.Operator):
+    bl_idname = "backup_objects.duplicating_all_ops"
+    bl_label = "Backups all Backup Objects."
+    bl_description = "Backs up All Backup objects"
+    bl_options = {'UNDO',}
+    
+    type: bpy.props.StringProperty(default="DEFAULT")
+    index: bpy.props.IntProperty(default=0, min=0)
+    
+    @classmethod
+    def poll(cls, context):
+        scene = bpy.context.scene
+        props = scene.BO_Props
+        
+        #return context.active_object is not None
+        return len(props.collections) > 0
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.BO_Props
+        #inputs = context.preferences.inputs
+        #bpy.context.preferences.inputs.view_rotate_method
+        
+        #if self.type == "DUPLICATE":
+        
+        # prev_mode saves the previous mode of the object
+        prev_mode = str(bpy.context.object.mode)
+        
+        # .mode_set() operator changes the mode of the object to "OBJECT" mode for the .duplicate_move() operator to work
+        if prev_mode != "OBJECT":
+            bpy.ops.object.mode_set(mode="OBJECT")
+            
+        # If there is no collection in master_collection, create one
+        if props.master_collection is None:
+            colNew = bpy.data.collections.new(props.new_collection_name)
+            #Sets master_collection as colNew
+            props.master_collection = colNew
+            
+            bpy.context.scene.collection.children.link(colNew)
+        
+        # Requires some selected objects to do anything
+        if len(bpy.context.selected_objects) > 0:
+            
+            previous_active = bpy.context.active_object
+            
+            # This is to not Backup Armatures when in Weight Paint Mode - TOP
+            previous_selected = bpy.context.selected_objects
+            previous_selected_unselected = []
+            
+            # Checks if you don't want to Backup Armatures when Weight Painting an Object
+            if props.exclude_armature == True and prev_mode == "WEIGHT_PAINT" :
+                
+                for i in previous_selected:
+                    if i.type == "ARMATURE":
+                        #previous_selected[i].select_set(False)
+                        i.select_set(False)
+                        previous_selected_unselected.append(i)
+                        #previous_selected.remove(i)
+                        
+                # Since there are less selected objects, it needs to be reassigned
+                previous_selected = bpy.context.selected_objects
+                        
+            
+            # BOTTOM
+            
+            # For only active object
+            # Checks if you only want to Backup the Active Object
+            if props.only_active == True :
+                for i in previous_selected:
+                    if i is not previous_active:
+                        # previous_selected[i].select_set(False)
+                        i.select_set(False)
+                        previous_selected_unselected.append(i)
+                        # previous_selected.remove(i)
+                        
+                # Must be a list with a comma, or else it isn't Iterable for enumerate()
+                previous_selected = [previous_active, ]
+                
+            # BOTTOM
+            
+            # Duplicates selected objects in previous_selected
+            bpy.ops.object.duplicate_move(OBJECT_OT_duplicate={"linked":False, "mode":'TRANSLATION'}, TRANSFORM_OT_translate={"value":(0.0, 0.0, 0.0), "orient_type":'GLOBAL'})
+            
+            total_objects_backed = len(bpy.context.selected_objects)
+
+            #Iterates through all selected objects
+            for i in enumerate(previous_selected):
+                existingCol = None
+                existingColName = ""
+                #lastOb = None
+                #All objects in previous_selected have been deselected, and all duplicated objects have been selected in "ob"
+                ob = bpy.context.selected_objects[i[0]]
+                
+                #Unlinks duplicate from all collections it is linked to
+                for k in enumerate(ob.users_collection):
+                    k[1].objects.unlink(ob)
+                
+                #Iterates through all BO_Props.collections
+                for j in enumerate(props.collections):
+                    #If object is already registered in props.collections:object
+                    if i[1] == j[1].object:
+                        existingCol = j[1]
+                        
+                        #If BO_Props.collections.collection is None (Ex. when a New Group collection is made)
+                        if j[1].collection is None:
+                            colNew = bpy.data.collections.new(i[1].name)
+                            #Sets BO_Props.collections' collection
+                            j[1].collection = colNew
+                            #Hides new collection
+                            colNew.hide_viewport = True
+                            
+                            props.master_collection.children.link(colNew)
+                        
+                        #Links duplicated object to existing collection
+                        j[1].collection.objects.link(ob)
+                        #j[1].duplicates += 1
+                        j[1].name = j[1].collection.name
+                        
+                        #print("For: 1")
+                        break
+                
+                ##print("existingCol: %s" % (str(existingCol)))
+                
+                #If object wasn't found inside props.collections as .object
+                if existingCol == None:
+                    #new_group_name = props.new_collection_name
+                    new_group_name = i[1].name
+                    
+                    colNew2 = bpy.data.collections.new(new_group_name)
+                    #Links colNew2 to master_collection
+                    props.master_collection.children.link(colNew2)
+                    
+                    #Links duplicate to colNew2 collection
+                    colNew2.objects.link(ob)
+                    
+                    #Adds scene.BO_Props collection
+                    propsCol = props.collections.add()
+                    propsCol.collection = colNew2
+                    propsCol.object = i[1]#i[1]#bpy.context.selected_objects[existinOb]
+                    #propsCol.duplicates += 1
+                    #Makes the name of 
+                    propsCol.name = colNew2.name
+                    #Adds the index of the order of created
+                    propsCol.recent += len(props.collections)
+                    #Custom Index will be in order if it is a new props.collection
+                    propsCol.custom += len(props.collections)
+                    
+                    #Adds icon name to props.collection object to display in Viewport
+                    propsCol.icon = objectIcon(propsCol.object)
+                    
+                    #Hides Collection
+                    propsCol.collection.hide_viewport = True
+                    
+                    #Hides Collection from being rendered
+                    propsCol.collection.hide_render  = True
+                    
+                    existingCol = propsCol
+                
+                #Unselects duplicated object
+                ob.select_set(False)
+                #Selects previously selected object
+                previous_selected[i[0]].select_set(True)
+                
+            #Reselects Previously Unselected Objects that weren't Backedup
+            for i in previous_selected_unselected:
+                i.select_set(True)
+                
+            #selects previously active object
+            previous_active.select_set(True)
+            #Sets previously active object as active
+            bpy.context.view_layer.objects.active = previous_active
+            
+            # String Report
+            report_objects = "Objects" if total_objects_backed > 1 else "Object"
+            self.report({'INFO'}, "Backed %d %s" % (total_objects_backed, report_objects) )
+        else:
+            reportString = "No Objects Selected. 0 Objects Duplicated"
+            
+            self.report({'INFO'}, reportString)
+        
+        #Calls the update function ListOrderUpdate to change locations of props.collections
+        ListOrderUpdate(self, context)
+        
+        #Sets BO_ULIndex as index of previously active context object
+        if props.index_to_new == True:
+        
+            for i in enumerate(props.collections):
+                if i[1].object == previous_active:
+                    props.BO_ULIndex = i[0]
+                    break
+        
+        #Changes the Mode of the active object back to its previous mode.
+        bpy.ops.object.mode_set(mode=prev_mode)
                         
         self.type == "DEFAULT"
         
@@ -530,7 +725,7 @@ class BACKUP_OBJECTS_OT_debugging(bpy.types.Operator):
         #Mass deletion of every Iteration Object & their collections and objects inside them
         if self.type == "DELETE_NUKE":
             
-            if props.collection_active is not None:
+            if props.master_collection is not None:
                 removedObjects = 0
                 removedCol = 0
                 
@@ -546,11 +741,11 @@ class BACKUP_OBJECTS_OT_debugging(bpy.types.Operator):
                         
                     props.collections.remove(len(props.collections)-1)
                     
-                colNameActive = props.collection_active.name
+                colNameActive = props.master_collection.name
                     
                 reportString = "Removed: [%s] & %d Objects & %d Collection Groups" % (colNameActive, removedObjects, removedCol)
                 
-                bpy.data.collections.remove(props.collection_active, do_unlink=True)
+                bpy.data.collections.remove(props.master_collection, do_unlink=True)
                 
                 print(reportString)
                 self.report({'INFO'}, reportString)
@@ -951,14 +1146,18 @@ class BACKUP_OBJECTS_MT_menu_select_collection(bpy.types.Menu):
             #bpy.data.collections.new("Boi") 
         #row.prop(self, "ui_tab", expand=True)#, text="X")
     
-class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel):
-    #A Custom Panel in Viewport
-    bl_idname = "BACKUP_OBJECTS_PT_custom_panel1"
-    bl_label = "Backup Object"
+# Default Settings for Panels
+class PANEL_DEFAULTS:
     bl_space_type = "VIEW_3D"
     bl_region_type = 'UI'
     #bl_context = "output"
     bl_category = "Backup"
+    bl_options = {"DEFAULT_CLOSED"}
+
+class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel, PANEL_DEFAULTS):
+    #A Custom Panel in Viewport
+    bl_idname = "BACKUP_OBJECTS_PT_custom_panel1"
+    bl_label = "Backup Object"
     
     # draw function
     def draw(self, context):
@@ -978,8 +1177,8 @@ class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel):
         
         MenuName2 = "Select Collection"
         
-        if props.collection_active is not None:
-            MenuName2 = props.collection_active.name
+        if props.master_collection is not None:
+            MenuName2 = props.master_collection.name
             
         #Lock Icon
         if props.lock_active == False:
@@ -987,14 +1186,14 @@ class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel):
         else:
             row.prop(props, "lock_active", icon="LOCKED", text="")
             
-        #if props.collection_active is None:
-        if props.lock_active == False or props.collection_active is None:
-            if props.collection_active is None:
+        #if props.master_collection is None:
+        if props.lock_active == False or props.master_collection is None:
+            if props.master_collection is None:
                 row.menu("BACKUP_OBJECTS_MT_menu_select_collection", icon="GROUP", text=MenuName2)
             else:
-                row.prop(props, "collection_active", text="")#, icon="GROUP", text="")
+                row.prop(props, "master_collection", text="")#, icon="GROUP", text="")
         else:
-            row.prop(props.collection_active, "name", icon="GROUP", text="")
+            row.prop(props.master_collection, "name", icon="GROUP", text="")
             
         row.operator("backup_objects.collection_ops", icon="ADD", text="").type = "NEW_GROUP"
         
@@ -1029,8 +1228,13 @@ class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel):
         #Changes text from "Iterate" to "Iterate New" if object wasn't found in Backup Objects
         ob_name_iterate = "Backup %d New %s" % (selected_objects, object_text) if iterateNew == False else "Backup %d %s" % (selected_objects, object_text)
         
+        Dup_String_All = "Backup %d Backup Objects" % (len(props.collections) )
+
         row = col.row(align=True)
         row.operator("backup_objects.duplicating_ops", icon="DUPLICATE", text=ob_name_iterate).type = "DUPLICATE"
+
+        row = col.row(align=True)
+        row.operator("backup_objects.duplicating_all_ops", icon="DUPLICATE", text=Dup_String_All).type = "DUPLICATE"
         
         #if props.dropdown_1 == True:
         row = col.row(align=True)
@@ -1112,13 +1316,9 @@ class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel):
         #End of CustomPanel
         
 
-class BACKUP_OBJECTS_PT_display_settings(bpy.types.Panel):
+class BACKUP_OBJECTS_PT_display_settings(bpy.types.Panel, PANEL_DEFAULTS):
     bl_label = "Display Settings"
     bl_parent_id = "BACKUP_OBJECTS_PT_custom_panel1"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = 'UI'
-    #bl_context = "output"
-    bl_category = "Backup"
     
     def draw(self, context):
         layout = self.layout
@@ -1126,7 +1326,7 @@ class BACKUP_OBJECTS_PT_display_settings(bpy.types.Panel):
         data = bpy.data
         props = scene.BO_Props
         
-        #collection_active: 
+        #master_collection: 
         #collections:
         
         col = layout.column()
@@ -1162,7 +1362,7 @@ class BACKUP_OBJECTS_PT_display_settings(bpy.types.Panel):
         row.label(text="New Parent Collection Name")
         
         row = col.row(align=True)
-        row.prop(props, "group_name", text="", icon="NONE")
+        row.prop(props, "new_collection_name", text="", icon="NONE")
         
         col.separator()
         
@@ -1173,13 +1373,9 @@ class BACKUP_OBJECTS_PT_display_settings(bpy.types.Panel):
         row = col.row(align=True)
         row.prop(props, "index_to_new", text="Update Active List Row", icon="NONE")
         
-class BACKUP_OBJECTS_PT_backup_settings(bpy.types.Panel):
+class BACKUP_OBJECTS_PT_backup_settings(bpy.types.Panel, PANEL_DEFAULTS):
     bl_label = "Backup Settings"
     bl_parent_id = "BACKUP_OBJECTS_PT_custom_panel1"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = 'UI'
-    #bl_context = "output"
-    bl_category = "Backup"
     
     def draw(self, context):
         layout = self.layout
@@ -1202,13 +1398,9 @@ class BACKUP_OBJECTS_PT_backup_settings(bpy.types.Panel):
         
         
         
-class BACKUP_OBJECTS_PT_cleaning(bpy.types.Panel):
+class BACKUP_OBJECTS_PT_cleaning(bpy.types.Panel, PANEL_DEFAULTS):
     bl_label = "Cleaning Operators"
     bl_parent_id = "BACKUP_OBJECTS_PT_custom_panel1"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = 'UI'
-    #bl_context = "output"
-    bl_category = "Backup"
     
     def draw(self, context):
         layout = self.layout
@@ -1238,20 +1430,16 @@ class BACKUP_OBJECTS_PT_cleaning(bpy.types.Panel):
         
         #col.separator()
         
-class BACKUP_OBJECTS_PT_debug_panel(bpy.types.Panel):
+class BACKUP_OBJECTS_PT_debug_panel(bpy.types.Panel, PANEL_DEFAULTS):
     bl_label = "Debugging Operators"
     bl_parent_id = "BACKUP_OBJECTS_PT_custom_panel1"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = 'UI'
-    #bl_context = "output"
-    bl_category = "Backup"
     
     @classmethod
     def poll(cls, context):
         scene = bpy.context.scene
         props = scene.BO_Props
         
-        #return props.collection_parent is not None and props.collection_active is not None
+        #return props.collection_parent is not None and props.master_collection is not None
         return props.debug_mode == True
     
     def draw(self, context):
@@ -1391,7 +1579,7 @@ class BACKUP_OBJECTS_preferences(bpy.types.AddonPreferences):
 props = scene.BO_Props
 active = props.BO_ULIndex
 
-#collection_active: 
+#master_collection: 
 #collections:
     #collection:
     #object:
@@ -1414,7 +1602,7 @@ class BACKUP_OBJECTS_collection_objects(bpy.types.PropertyGroup):
 class BACKUP_OBJECTS_props(bpy.types.PropertyGroup):
     #Tries to set collection_parent's default to Master Collection
     
-    collection_active: bpy.props.PointerProperty(name="Collection to add Collections for Object duplicates", type=bpy.types.Collection)
+    master_collection: bpy.props.PointerProperty(name="Master Collection to add Collections for Object duplicates", type=bpy.types.Collection)
     #Booleans for locking default collection of parent
     
     lock_active: bpy.props.BoolProperty(name="Lock Collection of Active", description="When locked, you can now edit the name of the selected collection", default=False)
@@ -1430,7 +1618,7 @@ class BACKUP_OBJECTS_props(bpy.types.PropertyGroup):
     
     #group_name_use: bpy.props.BoolProperty(name="Use Object Name for New Collection", description="Use the Object\'s name for the New Collection when creating a new Iteration Object", default=True)
     
-    group_name: bpy.props.StringProperty(name="New Collection Name", description="Name used when creating a new collection for Active", default="Group")
+    new_collection_name: bpy.props.StringProperty(name="New Collection Name", description="Name used when creating a new collection for Active Object", default="Group")
     
     listDesc =  ["Displays List in order of how many duplicates each object has", "Displays List in the order they were created", "Displays List in order user specified"]
     listDesc2 =  ["List displays in Descending Order", "List displays in Ascending Order"]
