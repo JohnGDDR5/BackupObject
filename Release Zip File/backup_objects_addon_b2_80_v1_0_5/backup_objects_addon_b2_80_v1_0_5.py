@@ -69,7 +69,7 @@ class BACKUP_OBJECTS_OT_select_collection(bpy.types.Operator):
 class BACKUP_OBJECTS_OT_group_operators(bpy.types.Operator):
     bl_idname = "backup_objects.collection_ops"
     bl_label = "Create a new Collection"
-    bl_description = "Creates a new Parent Collection where new Backup collections for Objects are created."
+    bl_description = "Creates a new Parent/Master Collection where new Backup collections for Objects are created."
     bl_options = {'UNDO',}
     type: bpy.props.StringProperty(default="DEFAULT")
     index: bpy.props.IntProperty(default=0, min=0)
@@ -541,7 +541,77 @@ class BACKUP_OBJECTS_OT_swap_backup_object(bpy.types.Operator, STRING_REPORT_FUN
         #self.type == "DEFAULT"
         
         return {'FINISHED'}
+
+class BACKUP_OBJECTS_OT_select_backup_ob_and_col(bpy.types.Operator, STRING_REPORT_FUNCTIONS):
+    bl_idname = "backup_objects.select_backup_ob_and_col"
+    bl_label = "Select Backup Object or Collection"
+    bl_description = "Select Backup Object or Collection of active Backup"
+    bl_options = {'UNDO',}
+    
+    type: bpy.props.StringProperty(default="DEFAULT")
+
+    @classmethod
+    def poll(cls, context):
+        scene = bpy.context.scene
+        props = scene.BO_Props
         
+        return context.active_object is not None
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.BO_Props
+        
+        # Selects Object of Active Backup of UI List
+        if self.type == "LIST_BACKUP_OBJECT":
+            if len(props.collections) > 0:
+                props_backup = props.collections[props.BO_ULIndex ] # Active Backup in UI List
+
+                if props_backup.object is not None:
+                    # If Object is in the 3D viewport
+                    if props_backup.object.visible_get() == True:
+                        # Sets active object
+                        bpy.context.view_layer.objects.active = props_backup.object
+                    else:
+                        reportString = "Object not in 3D Viewport"
+        # Selects Collection of Active Backup of UI List
+        elif self.type == "LIST_BACKUP_COLLECTION":
+            if len(props.collections) > 0:
+                props_backup = props.collections[props.BO_ULIndex ] # Active Backup in UI List
+
+                if props_backup.collection is not None:
+
+                    def getLayerCollection(collection):
+                        layerCollection = None
+
+                        for i in context.view_layer.layer_collection.children:
+                            print("i: %s, child: %s" % (i.name, collection.name) )
+                            if i.name == collection.name:
+                                layerCollection = i
+                                break
+                        return layerCollection #object type is LayerCollection, not Collection
+
+                    props_backup_layer_collection = getLayerCollection(props_backup.collection)
+
+                    bpy.context.view_layer.active_layer_collection = props_backup_layer_collection
+
+                    reportString = "Selected Collection %s of %s" % (props_backup.collection.name, props_backup.object.name)
+                else:
+                    reportString = "Object doesn't have a Backup Collection"
+            else:
+                reportString = "No Backups to Select From"
+        
+        else:
+            reportString = "No Type Set"
+            
+        self.report({'INFO'}, reportString)
+        
+        # Calls the update function ListOrderUpdate to change locations of props.collections
+        ListOrderUpdate(self, context)
+                        
+        self.type == "DEFAULT"
+        
+        return {'FINISHED'}
+
 class BACKUP_OBJECTS_OT_cleaning(bpy.types.Operator):
     bl_idname = "backup_objects.cleaning_ops"
     bl_label = "Cleaning/Deleting Operators "
@@ -1198,8 +1268,8 @@ class BACKUP_OBJECTS_MT_menu_select_collection(bpy.types.Menu):
             # bpy.data.collections.new("Boi") 
         # row.prop(self, "ui_tab", expand=True)# , text="X")
 
-class BACKUP_OBJECTS_MT_menu_select_collection(bpy.types.Menu):
-    bl_idname = "BACKUP_OBJECTS_MT_menu_select_collection"
+class BACKUP_OBJECTS_MT_extra_backup_functions(bpy.types.Menu):
+    bl_idname = "BACKUP_OBJECTS_MT_extra_backup_functions"
     bl_label = "Extra Backup Functions"
     bl_description = "Extra functions for Backups"
     
@@ -1216,6 +1286,35 @@ class BACKUP_OBJECTS_MT_menu_select_collection(bpy.types.Menu):
         Dup_String_All = "Backup All Backups: %d" % (len(props.collections) )
         # row = col.row(align=True)
         button = col.operator("backup_objects.duplicating_all_ops", icon="DUPLICATE", text=Dup_String_All)
+
+        row = col.row(align=True)
+        row.operator("backup_objects.swap_backup_object", icon="DUPLICATE", text="Swap Objects")
+
+class BACKUP_OBJECTS_MT_extra_ui_list_functions(bpy.types.Menu):
+    bl_idname = "BACKUP_OBJECTS_MT_extra_ui_list_functions"
+    bl_label = "Extra UI List Backup Functions"
+    bl_description = "Extra functions for Backups UI List"
+    
+    # here you specify how they are drawn
+    def draw(self, context):
+        layout = self.layout
+
+        scene = context.scene
+        data = bpy.data
+        props = scene.BO_Props
+        
+        col = layout.column()
+
+        #Dup_String_All = "Backup All Backups: %d" % (len(props.collections) )
+        # row = col.row(align=True)
+        button = col.operator("backup_objects.select_backup_ob_and_col", icon="DUPLICATE", text="Select Backup Object")
+        button.type = "LIST_BACKUP_OBJECT"
+
+        button = col.operator("backup_objects.select_backup_ob_and_col", icon="DUPLICATE", text="Select Backup Collection")
+        button.type = "LIST_BACKUP_COLLECTION"
+
+        button = col.operator("backup_objects.ui_ops_select", icon="RESTRICT_SELECT_OFF", text="Select List of Active Object")
+        button.type = "SELECT_ACTIVE_UI"
 
         row = col.row(align=True)
         row.operator("backup_objects.swap_backup_object", icon="DUPLICATE", text="Swap Objects")
@@ -1312,7 +1411,7 @@ class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel): #, PANEL_DEFAULTS):
         row = col.row(align=True)
         row.operator("backup_objects.duplicating_ops", icon="DUPLICATE", text=ob_name_iterate).type = "DUPLICATE"
 
-        row.menu("BACKUP_OBJECTS_MT_menu_select_collection", icon="DOWNARROW_HLT", text="")
+        row.menu("BACKUP_OBJECTS_MT_extra_backup_functions", icon="DOWNARROW_HLT", text="")
 
         # if props.dropdown_1 == True:
         row = col.row(align=True)
@@ -1359,8 +1458,10 @@ class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel): #, PANEL_DEFAULTS):
         button = col.operator("backup_objects.ui_ops_move", text="", icon="PANEL_CLOSE")
         button.type = "REMOVE"
         
-        button = col.operator("backup_objects.ui_ops_select", text="", icon="RESTRICT_SELECT_OFF")
-        button.type = "SELECT_ACTIVE_UI"
+        col.menu("BACKUP_OBJECTS_MT_extra_ui_list_functions", icon="DOWNARROW_HLT", text="")
+
+        #button = col.operator("backup_objects.ui_ops_select", text="", icon="RESTRICT_SELECT_OFF")
+        #button.type = "SELECT_ACTIVE_UI"
         # SELECT_ACTIVE_UI
         
         col = layout.column()

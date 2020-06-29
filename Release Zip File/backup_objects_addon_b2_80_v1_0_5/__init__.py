@@ -21,6 +21,7 @@ from . backup_objects_addon_b2_80_v1_0_5 import (
     BACKUP_OBJECTS_OT_duplicate,
     BACKUP_OBJECTS_OT_duplicate_all,
     BACKUP_OBJECTS_OT_swap_backup_object,
+    BACKUP_OBJECTS_OT_select_backup_ob_and_col,
     BACKUP_OBJECTS_OT_cleaning,
     BACKUP_OBJECTS_OT_removing,
     
@@ -30,6 +31,8 @@ from . backup_objects_addon_b2_80_v1_0_5 import (
     
     BACKUP_OBJECTS_UL_items,
     BACKUP_OBJECTS_MT_menu_select_collection,
+    BACKUP_OBJECTS_MT_extra_backup_functions,
+    BACKUP_OBJECTS_MT_extra_ui_list_functions,
     
     BACKUP_OBJECTS_PT_custom_panel1,
     BACKUP_OBJECTS_PT_display_settings,
@@ -52,6 +55,7 @@ classes = (
     BACKUP_OBJECTS_OT_duplicate,
     BACKUP_OBJECTS_OT_duplicate_all,
     BACKUP_OBJECTS_OT_swap_backup_object,
+    BACKUP_OBJECTS_OT_select_backup_ob_and_col,
     BACKUP_OBJECTS_OT_cleaning,
     BACKUP_OBJECTS_OT_removing,
     
@@ -61,6 +65,8 @@ classes = (
     
     BACKUP_OBJECTS_UL_items,
     BACKUP_OBJECTS_MT_menu_select_collection,
+    BACKUP_OBJECTS_MT_extra_backup_functions,
+    BACKUP_OBJECTS_MT_extra_ui_list_functions,
     
     BACKUP_OBJECTS_PT_custom_panel1,
     BACKUP_OBJECTS_PT_display_settings,
