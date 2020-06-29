@@ -570,31 +570,54 @@ class BACKUP_OBJECTS_OT_select_backup_ob_and_col(bpy.types.Operator, STRING_REPO
                     # If Object is in the 3D viewport
                     if props_backup.object.visible_get() == True:
                         # Sets active object
-                        bpy.context.view_layer.objects.active = props_backup.object
+                        props_backup.object.select_set(True)
+                        # Sets the object as Active Object if there isn't an Active Object
+                        if bpy.context.view_layer.objects.active is None:
+                            bpy.context.view_layer.objects.active = props_backup.object
+                        reportString = "Selected \'%s\' Object" % (props_backup.object.name)
                     else:
-                        reportString = "Object not in 3D Viewport"
+                        reportString = "\'%s\' Object not in 3D Viewport" % (props_backup.object.name)
+                else:
+                    reportString = "Backup has no Object Pointed at"
+            else:
+                reportString = "No Backups to Select From"
         # Selects Collection of Active Backup of UI List
         elif self.type == "LIST_BACKUP_COLLECTION":
             if len(props.collections) > 0:
                 props_backup = props.collections[props.BO_ULIndex ] # Active Backup in UI List
 
                 if props_backup.collection is not None:
+                    props_backup_layer_collection = None
 
-                    def getLayerCollection(collection):
-                        layerCollection = None
-
-                        for i in context.view_layer.layer_collection.children:
-                            print("i: %s, child: %s" % (i.name, collection.name) )
-                            if i.name == collection.name:
-                                layerCollection = i
-                                break
-                        return layerCollection #object type is LayerCollection, not Collection
-
-                    props_backup_layer_collection = getLayerCollection(props_backup.collection)
-
+                    def getLayerCollection(layer_collection, collection):#, props_backup_layer_collection):
+                        nonlocal props_backup_layer_collection
+                        #props_backup_layer_collection = None
+                        
+                        if layer_collection.name == collection.name:
+                            props_backup_layer_collection = layer_collection
+                            return
+                        else:
+                            for i in layer_collection.children:
+                                if props_backup_layer_collection is None:
+                                    #print("i: %s, child: %s" % (i.name, collection.name) )
+                                    if len(i.children) > 0:
+                                        #print("children: %d" % (len(i.children)) )
+                                        for j in i.children:
+                                            getLayerCollection(j, collection)#, props_backup_layer_collection)
+                                    if i.name == collection.name:
+                                        #print("OOF 2")
+                                        props_backup_layer_collection = i
+                                        break
+                                else:
+                                    #print("OOF")
+                                    break
+                        return  #object type is LayerCollection, not Collection
+                    getLayerCollection(context.view_layer.layer_collection, props_backup.collection)
+                    
+                    #print("props_backup_layer_collection: %s" % (str(props_backup_layer_collection)) )
                     bpy.context.view_layer.active_layer_collection = props_backup_layer_collection
 
-                    reportString = "Selected Collection %s of %s" % (props_backup.collection.name, props_backup.object.name)
+                    reportString = "Selected Collection \'%s\' of \'%s\' Object" % (props_backup.collection.name, props_backup.object.name)
                 else:
                     reportString = "Object doesn't have a Backup Collection"
             else:
@@ -606,7 +629,7 @@ class BACKUP_OBJECTS_OT_select_backup_ob_and_col(bpy.types.Operator, STRING_REPO
         self.report({'INFO'}, reportString)
         
         # Calls the update function ListOrderUpdate to change locations of props.collections
-        ListOrderUpdate(self, context)
+        #ListOrderUpdate(self, context)
                         
         self.type == "DEFAULT"
         
@@ -1307,17 +1330,14 @@ class BACKUP_OBJECTS_MT_extra_ui_list_functions(bpy.types.Menu):
 
         #Dup_String_All = "Backup All Backups: %d" % (len(props.collections) )
         # row = col.row(align=True)
-        button = col.operator("backup_objects.select_backup_ob_and_col", icon="DUPLICATE", text="Select Backup Object")
+        button = col.operator("backup_objects.select_backup_ob_and_col", icon="RESTRICT_SELECT_OFF", text="Select Backup Object")
         button.type = "LIST_BACKUP_OBJECT"
 
-        button = col.operator("backup_objects.select_backup_ob_and_col", icon="DUPLICATE", text="Select Backup Collection")
+        button = col.operator("backup_objects.select_backup_ob_and_col", icon="RESTRICT_SELECT_OFF", text="Select Backup Collection")
         button.type = "LIST_BACKUP_COLLECTION"
 
         button = col.operator("backup_objects.ui_ops_select", icon="RESTRICT_SELECT_OFF", text="Select List of Active Object")
         button.type = "SELECT_ACTIVE_UI"
-
-        row = col.row(align=True)
-        row.operator("backup_objects.swap_backup_object", icon="DUPLICATE", text="Swap Objects")
     
 # Default Settings for Panels
 class PANEL_DEFAULTS:
