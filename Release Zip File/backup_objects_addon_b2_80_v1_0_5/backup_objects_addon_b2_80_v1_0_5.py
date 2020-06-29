@@ -304,10 +304,6 @@ class BACKUP_OBJECTS_OT_duplicate_all(bpy.types.Operator, STRING_REPORT_FUNCTION
     def execute(self, context):
         scene = bpy.context.scene
         props = scene.BO_Props
-        # inputs = context.preferences.inputs
-        # bpy.context.preferences.inputs.view_rotate_method
-        
-        #if self.type == "DUPLICATE":
         
         # previous_mode saves the previous mode of the object
         previous_mode = str(bpy.context.object.mode)
@@ -339,7 +335,9 @@ class BACKUP_OBJECTS_OT_duplicate_all(bpy.types.Operator, STRING_REPORT_FUNCTION
             # Selects objects that have Backups
             for j in enumerate(props.collections):
                 if j[1].object is not None:
-                    j[1].object.select_set(True)
+                    # Since some deleted objects can still be tracked by the Pointer, they won't be selectable in the 3D ViewLayer
+                    if j[1].object.visible_get() == True:
+                        j[1].object.select_set(True)
             
             selected_backups = list(bpy.context.selected_objects)
             # Duplicates selected objects in previous_selected
@@ -395,11 +393,11 @@ class BACKUP_OBJECTS_OT_duplicate_all(bpy.types.Operator, STRING_REPORT_FUNCTION
             
             # String Report
             #report_objects = "Objects" if total_objects_backed > 1 else "Object"
-            self.report({'INFO'}, "Backed %d %s" % (total_objects_backed, self.report_objects(total_objects_backed) ) )
+            reportString = "Backed %d %s" % (total_objects_backed, self.report_objects(total_objects_backed) )
         else:
-            reportString = "No Objects Selected. 0 Objects Duplicated"
+            reportString = "No Backup Collections to Backup"
             
-            self.report({'INFO'}, reportString)
+        self.report({'INFO'}, reportString)
         
         # Calls the update function ListOrderUpdate to change locations of props.collections
         ListOrderUpdate(self, context)
@@ -414,6 +412,131 @@ class BACKUP_OBJECTS_OT_duplicate_all(bpy.types.Operator, STRING_REPORT_FUNCTION
         
         # Changes the Mode of the active object back to its previous mode.
         bpy.ops.object.mode_set(mode=previous_mode)
+                        
+        #self.type == "DEFAULT"
+        
+        return {'FINISHED'}
+
+class BACKUP_OBJECTS_OT_swap_backup_object(bpy.types.Operator, STRING_REPORT_FUNCTIONS):
+    bl_idname = "backup_objects.swap_backup_object"
+    bl_label = "Swaps Selected Object from Backups"
+    bl_description = "Swaps Selected Object if it is inside the Backups of Active Object"
+    bl_options = {'UNDO',}
+    
+    @classmethod
+    def poll(cls, context):
+        scene = bpy.context.scene
+        props = scene.BO_Props
+        
+        return context.active_object is not None
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.BO_Props
+        
+        # previous_mode saves the previous mode of the object
+        previous_mode = str(bpy.context.object.mode)
+        previous_object_type = str(bpy.context.object.type)
+        
+        # .mode_set() operator changes the mode of the object to "OBJECT" mode for the .duplicate_move() operator to work
+        if previous_mode != "OBJECT":
+            bpy.ops.object.mode_set(mode="OBJECT")
+            
+        # Creates a new master_collection if there isn't one already
+        if props.master_collection is None:
+            new_master_col = bpy.data.collections.new(props.new_collection_name)
+            # Sets master_collection as new_master_col
+            props.master_collection = new_master_col
+            
+            bpy.context.scene.collection.children.link(new_master_col)
+        
+        # Requires some selected objects to do anything
+        if len(props.collections) > 0:
+            
+            previous_active = bpy.context.active_object
+            # .users_collection returns a tuple of collections an object is in
+            previous_active_collection = previous_active.users_collection[0]
+            
+            def props_backup(ob):
+                for i in props.collections:
+                    if ob == i.object:
+                        return i
+                return None
+
+            props_backup = props_backup(previous_active)
+
+            if len(bpy.context.selected_objects) == 2:
+                # Checks if Active object has been Backed Up, else there is no reason to swap
+                if props_backup is not None:
+                        
+                    # This is to not Backup Armatures when in Weight Paint Mode - TOP
+                    previous_selected = list(bpy.context.selected_objects)
+
+                    # Gets the 2nd object that was selected
+                    object_from_backups = previous_selected[1] if previous_selected[0] is previous_active else previous_selected[0]
+                    
+                    object_from_backups_collection = object_from_backups.users_collection[0] # Gets the 1st collection the object is in, may change later
+
+                    # Sorts the previous_selected so that previous_active is always first
+                    if previous_selected[1] is previous_active:
+                        previous_selected.remove(object_from_backups)
+                        previous_selected.append(object_from_backups)
+
+                    # Unlinks objects from their previous collections
+                    for i in previous_selected:
+                        for j in i.users_collection:
+                            j.objects.unlink(i)
+                    
+                    # Links the Objects to their opposite collections
+                    previous_active_collection.objects.link(object_from_backups) # Backup to Previous
+                    object_from_backups_collection.objects.link(previous_active) # Previous to Backup
+
+                    # Sets the Active Object to selected object
+                    bpy.context.view_layer.objects.active = object_from_backups
+
+                    # Swaps the hide options
+                    def swap_hide_options(ob1, ob2):
+                        ob1_hide_set = ob1.hide_get()
+                        ob1_hide_viewport = ob1.hide_viewport
+                        ob1_hide_render = ob1.hide_render
+
+                        ob1.hide_set(ob2.hide_get() )
+                        ob1.hide_viewport = ob2.hide_viewport
+                        ob1.hide_render = ob2.hide_render
+
+                        ob2.hide_set(ob1_hide_set )
+                        ob2.hide_viewport = ob1_hide_viewport
+                        ob2.hide_render = ob1_hide_render
+
+                    swap_hide_options(previous_active, object_from_backups)
+                    
+                    # Sets the New Tracking/Pointer object to the Swapped Object
+                    props_backup.object = object_from_backups
+
+                    # String Report
+                    #report_objects = "Objects" if total_objects_backed > 1 else "Object"
+                    #reportString = "Backed %d %s" % (total_objects_backed, self.report_objects(total_objects_backed) )
+                    reportString = "Swapped \'%s\' with \'%s\'. Now Tracking swapped object in %s" % (previous_active.name, object_from_backups.name, object_from_backups_collection.name  )
+                else:
+                    reportString = "Active Object doesn't have a Backup"
+            else:
+                if len(previous_selected) > 2:
+                    reportString = "Only 2 Objects need to be selected with 1 active"
+                else:
+                    reportString = "2 Objects need to be selected"
+        else:
+            reportString = "No Backup Collections to Backup"
+            
+        self.report({'INFO'}, reportString)
+        
+        # Calls the update function ListOrderUpdate to change locations of props.collections
+        ListOrderUpdate(self, context)
+        
+        # Changes the Mode of the active object back to its previous mode.
+        if str(bpy.context.active_object.type) == previous_object_type:
+            bpy.ops.object.mode_set(mode=previous_mode)
+        else:
+            bpy.ops.object.mode_set(mode="OBJECT")
                         
         #self.type == "DEFAULT"
         
@@ -1076,7 +1199,7 @@ class BACKUP_OBJECTS_MT_menu_select_collection(bpy.types.Menu):
         # row.prop(self, "ui_tab", expand=True)# , text="X")
 
 class BACKUP_OBJECTS_MT_menu_select_collection(bpy.types.Menu):
-    bl_idname = "BACKUP_OBJECTS_MT_extra_backup_functions"
+    bl_idname = "BACKUP_OBJECTS_MT_menu_select_collection"
     bl_label = "Extra Backup Functions"
     bl_description = "Extra functions for Backups"
     
@@ -1093,6 +1216,9 @@ class BACKUP_OBJECTS_MT_menu_select_collection(bpy.types.Menu):
         Dup_String_All = "Backup All Backups: %d" % (len(props.collections) )
         # row = col.row(align=True)
         button = col.operator("backup_objects.duplicating_all_ops", icon="DUPLICATE", text=Dup_String_All)
+
+        row = col.row(align=True)
+        row.operator("backup_objects.swap_backup_object", icon="DUPLICATE", text="Swap Objects")
     
 # Default Settings for Panels
 class PANEL_DEFAULTS:
@@ -1102,11 +1228,16 @@ class PANEL_DEFAULTS:
     bl_category = "Backup"
     bl_options = {"DEFAULT_CLOSED"}
 
-class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel, PANEL_DEFAULTS):
+class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel): #, PANEL_DEFAULTS):
     # A Custom Panel in Viewport
     bl_idname = "BACKUP_OBJECTS_PT_custom_panel1"
     bl_label = "Backup Object"
-    
+    bl_space_type = "VIEW_3D"
+    bl_region_type = 'UI'
+    # bl_context = "output"
+    bl_category = "Backup"
+    #bl_options = {"DEFAULT_CLOSED"}
+
     # draw function
     def draw(self, context):
                  
@@ -1181,8 +1312,8 @@ class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel, PANEL_DEFAULTS):
         row = col.row(align=True)
         row.operator("backup_objects.duplicating_ops", icon="DUPLICATE", text=ob_name_iterate).type = "DUPLICATE"
 
-        row.menu("BACKUP_OBJECTS_MT_extra_backup_functions", icon="DOWNARROW_HLT", text="")
-        
+        row.menu("BACKUP_OBJECTS_MT_menu_select_collection", icon="DOWNARROW_HLT", text="")
+
         # if props.dropdown_1 == True:
         row = col.row(align=True)
         
