@@ -417,6 +417,108 @@ class BACKUP_OBJECTS_OT_duplicate_all(bpy.types.Operator, STRING_REPORT_FUNCTION
         
         return {'FINISHED'}
 
+class BACKUP_OBJECTS_OT_full_backup(bpy.types.Operator, STRING_REPORT_FUNCTIONS):
+    bl_idname = "backup_objects.full_backup_ops"
+    bl_label = "Backs up all selected Backup Objects and sends them to a \"Full Backup\" Collection."
+    bl_description = "Backs up All Backup objects"
+    bl_options = {'UNDO',}
+    
+    @classmethod
+    def poll(cls, context):
+        scene = bpy.context.scene
+        props = scene.BO_Props
+        
+        return context.active_object is not None
+    
+    def execute(self, context):
+        scene = bpy.context.scene
+        props = scene.BO_Props
+        
+        # previous_mode saves the previous mode of the object
+        previous_mode = str(bpy.context.object.mode)
+        
+        # .mode_set() operator changes the mode of the object to "OBJECT" mode for the .duplicate_move() operator to work
+        if previous_mode != "OBJECT":
+            bpy.ops.object.mode_set(mode="OBJECT")
+            
+        # Creates a new master_collection if there isn't one already
+        # bpy.data.collections.get("Full Backups") is not None
+        if props.full_backups_collection is None:
+            new_master_col = bpy.data.collections.new("Full Backups")
+            # Sets master_collection as new_master_col
+            props.full_backups_collection = new_master_col
+            
+            bpy.context.scene.collection.children.link(new_master_col)
+        
+        # New Full Backup Collection
+        new_backup_col = bpy.data.collections.new("Full Backup %s" % (len(props.full_backups_collection.children) + 1 ) )
+        # Hides new collection
+        new_backup_col.hide_viewport = True
+        # Links collection to scene
+        props.full_backups_collection.children.link(new_backup_col)
+        
+        previous_active = bpy.context.active_object
+        
+        # This is to not Backup Armatures when in Weight Paint Mode - TOP
+        previous_selected = list(bpy.context.selected_objects)
+
+        if len(props.collections) > 0:
+            # Unselects All Selected Objects   
+            for i in bpy.context.selected_objects:
+                i.select_set(False)
+            
+            # Selects objects that have Backups
+            for j in enumerate(props.collections):
+                if j[1].object is not None:
+                    # Since some deleted objects can still be tracked by the Pointer, they won't be selectable in the 3D ViewLayer
+                    if j[1].object.visible_get() == True:
+                        j[1].object.select_set(True)
+        
+        selected_backups = list(bpy.context.selected_objects)
+
+        if len(selected_backups) > 0:
+            # Duplicates selected objects in previous_selected
+            bpy.ops.object.duplicate_move(OBJECT_OT_duplicate={"linked":False, "mode":'TRANSLATION'}, TRANSFORM_OT_translate={"value":(0.0, 0.0, 0.0), "orient_type":'GLOBAL'})
+            
+            selected_backup_duplicates = list(bpy.context.selected_objects)
+            total_objects_backed = len(selected_backups)
+            
+            for ob in selected_backup_duplicates:
+
+                # Unlinks duplicate from all collections it is linked to
+                for k in enumerate(ob.users_collection):
+                    k[1].objects.unlink(ob)
+                
+                # Links object to new Full Backup Collection
+                new_backup_col.objects.link(ob)
+                # Unselects duplicated object (Since they aren't the originally selected)
+                ob.select_set(False)
+                    
+            # Reselects Previously Unselected Objects that weren't Backed up
+            #for i in previous_selected_unselected:
+            for i in previous_selected:
+                i.select_set(True)
+                
+            # selects previously active object
+            previous_active.select_set(True)
+            # Sets previously active object as active
+            bpy.context.view_layer.objects.active = previous_active
+                
+            # String Report
+            #report_objects = "Objects" if total_objects_backed > 1 else "Object"
+            reportString = "Backed %d/%d %s" % (total_objects_backed, len(previous_selected), self.report_objects(total_objects_backed) )
+        else:
+            reportString = "No Backup Objects to Backup"
+            
+        self.report({'INFO'}, reportString)
+        
+        # Changes the Mode of the active object back to its previous mode.
+        bpy.ops.object.mode_set(mode=previous_mode)
+                        
+        #self.type == "DEFAULT"
+        
+        return {'FINISHED'}
+
 class BACKUP_OBJECTS_OT_swap_backup_object(bpy.types.Operator, STRING_REPORT_FUNCTIONS):
     bl_idname = "backup_objects.swap_backup_object"
     bl_label = "Swaps Selected Object from Backups"
@@ -1313,6 +1415,10 @@ class BACKUP_OBJECTS_MT_extra_backup_functions(bpy.types.Menu):
         row = col.row(align=True)
         row.operator("backup_objects.swap_backup_object", icon="DUPLICATE", text="Swap Objects")
 
+        row = col.row(align=True)
+        row.operator("backup_objects.full_backup_ops", icon="DUPLICATE", text="Full Backup")
+        
+
 class BACKUP_OBJECTS_MT_extra_ui_list_functions(bpy.types.Menu):
     bl_idname = "BACKUP_OBJECTS_MT_extra_ui_list_functions"
     bl_label = "Extra UI List Backup Functions"
@@ -1802,6 +1908,7 @@ class BACKUP_OBJECTS_props(bpy.types.PropertyGroup):
     # Tries to set collection_parent's default to Master Collection
     
     master_collection: bpy.props.PointerProperty(name="Master Collection to add Collections for Object duplicates", type=bpy.types.Collection)
+    full_backups_collection: bpy.props.PointerProperty(name="Collection to add Full Backups duplicates", type=bpy.types.Collection)
     # Booleans for locking default collection of parent
     
     lock_active: bpy.props.BoolProperty(name="Lock Collection of Active", description="When locked, you can now edit the name of the selected collection", default=False)
