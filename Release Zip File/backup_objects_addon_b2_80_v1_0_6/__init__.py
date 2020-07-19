@@ -2,7 +2,7 @@ bl_info = {
     "name": "Backup Object",
     "description": "Workflow Addon for easy duplication and organization of objects into collections, to work as \"backups\" for destructive modeling.",
     "author": "Juan Cardenas (JohnGDDR5)",
-    "version": (1, 0, 5), 
+    "version": (1, 0, 6), 
     "blender": (2, 80, 0),
     "location": "3D View > Side Bar > Backup Object",
     "warning": "In Development",
@@ -15,7 +15,7 @@ import bpy
 from bpy.props import *
 
 #from . backup_objects_addon_b2_80_v1_0_1 import classes
-from . backup_objects_addon_b2_80_v1_0_5 import (
+from . backup_objects_addon_b2_80_v1_0_6 import (
     BACKUP_OBJECTS_OT_select_collection,
     BACKUP_OBJECTS_OT_group_operators,
     BACKUP_OBJECTS_OT_duplicate,

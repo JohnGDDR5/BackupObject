@@ -346,8 +346,7 @@ class BACKUP_OBJECTS_OT_duplicate_all(bpy.types.Operator, STRING_REPORT_FUNCTION
             selected_backup_duplicates = list(bpy.context.selected_objects)
             total_objects_backed = len(selected_backups)
             
-            for i in enumerate(selected_backups ): 
-                existingCol = None
+            for i in enumerate(selected_backups ):
                 
                 # All objects in previous_selected have been deselected, and all duplicated objects have been selected in "ob"
                 ob = selected_backup_duplicates[i[0]]
@@ -360,7 +359,6 @@ class BACKUP_OBJECTS_OT_duplicate_all(bpy.types.Operator, STRING_REPORT_FUNCTION
                 for j in enumerate(props.collections):
                     # If object is already registered in props.collections:object
                     if i[1] == j[1].object:
-                        existingCol = j[1]
                         
                         # Ceate Backup collection if BO_Props.collections[].collection is None (Ex. when a New Group collection is made)
                         if j[1].collection is None:
@@ -421,8 +419,10 @@ class BACKUP_OBJECTS_OT_full_backup(bpy.types.Operator, STRING_REPORT_FUNCTIONS)
     bl_idname = "backup_objects.full_backup_ops"
     bl_label = "Backs up all selected Backup Objects and sends them to a \"Full Backup\" Collection."
     bl_description = "Backs up All Backup objects"
-    bl_options = {'UNDO',}
+    bl_options = {'UNDO', 'REGISTER'}
     
+    only_backups: bpy.props.BoolProperty(name="Only Backups", description=" Only Full Backups of already Backed up Objects. Won't create new Backup Objects from selection.", default=False)
+
     @classmethod
     def poll(cls, context):
         scene = bpy.context.scene
@@ -451,28 +451,31 @@ class BACKUP_OBJECTS_OT_full_backup(bpy.types.Operator, STRING_REPORT_FUNCTIONS)
             bpy.context.scene.collection.children.link(new_master_col)
         
         # New Full Backup Collection
-        new_backup_col = bpy.data.collections.new("Full Backup %s" % (len(props.full_backups_collection.children) + 1 ) )
+        new_full_backup_col = bpy.data.collections.new("Full Backup %s" % (len(props.full_backups_collection.children) + 1 ) )
         # Hides new collection
-        new_backup_col.hide_viewport = True
+        new_full_backup_col.hide_viewport = True
+        new_full_backup_col.hide_render = True
         # Links collection to scene
-        props.full_backups_collection.children.link(new_backup_col)
+        props.full_backups_collection.children.link(new_full_backup_col)
         
         previous_active = bpy.context.active_object
         
         # This is to not Backup Armatures when in Weight Paint Mode - TOP
         previous_selected = list(bpy.context.selected_objects)
 
-        if len(props.collections) > 0:
-            # Unselects All Selected Objects   
-            for i in bpy.context.selected_objects:
-                i.select_set(False)
-            
-            # Selects objects that have Backups
-            for j in enumerate(props.collections):
-                if j[1].object is not None:
-                    # Since some deleted objects can still be tracked by the Pointer, they won't be selectable in the 3D ViewLayer
-                    if j[1].object.visible_get() == True:
-                        j[1].object.select_set(True)
+        # If you only want existing Backup Objects to be Fully BackedUp
+        if self.only_backups == True:
+            if len(props.collections) > 0:
+                # Unselects All Selected Objects   
+                for i in bpy.context.selected_objects:
+                    i.select_set(False)
+                
+                # Selects objects that have Backups
+                for j in enumerate(props.collections):
+                    if j[1].object is not None:
+                        # Since some deleted objects can still be tracked by the Pointer, they won't be selectable in the 3D ViewLayer
+                        if j[1].object.visible_get() == True:
+                            j[1].object.select_set(True)
         
         selected_backups = list(bpy.context.selected_objects)
 
@@ -490,12 +493,11 @@ class BACKUP_OBJECTS_OT_full_backup(bpy.types.Operator, STRING_REPORT_FUNCTIONS)
                     k[1].objects.unlink(ob)
                 
                 # Links object to new Full Backup Collection
-                new_backup_col.objects.link(ob)
+                new_full_backup_col.objects.link(ob)
                 # Unselects duplicated object (Since they aren't the originally selected)
                 ob.select_set(False)
                     
             # Reselects Previously Unselected Objects that weren't Backed up
-            #for i in previous_selected_unselected:
             for i in previous_selected:
                 i.select_set(True)
                 
