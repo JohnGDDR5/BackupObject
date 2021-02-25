@@ -29,6 +29,7 @@ def objectIcon(object):
         "LIGHT": "OUTLINER_OB_LIGHT",
         "LIGHT_PROBE": "OUTLINER_OB_LIGHTPROBE",
         "SPEAKER": "OUTLINER_OB_SPEAKER",
+        "VOLUME": "OUTLINER_OB_VOLUME",
     }
     
     # If there is an object to see if it has a type
@@ -176,7 +177,17 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator, STRING_REPORT_FUNCTIONS):
                             
                     # Must be a list with a comma, or else it isn't Iterable for enumerate()
                     previous_selected = [previous_active, ]
-                    
+
+                # New Code 2/25/2021 Added support for including Boolean Objects, for BoxCutter addon workflows.
+                if props.include_bool_objects == True :
+                    for i in previous_selected:
+                        if len(i.modifiers) > 0:
+                            for j in i.modifiers:
+                                if j.object is not None:
+                                    j.object.select_set(True)
+
+                # If Bool Objects are selected, must reasign previous_selected
+                previous_selected = bpy.context.selected_objects
                 # BOTTOM
                 
                 # Duplicates selected objects in previous_selected
@@ -624,7 +635,7 @@ class BACKUP_OBJECTS_OT_swap_backup_object(bpy.types.Operator, STRING_REPORT_FUN
                 else:
                     reportString = "Active Object doesn't have a Backup"
             else:
-                if len(previous_selected) > 2:
+                if len(bpy.context.selected_objects) > 2:
                     reportString = "Only 2 Objects need to be selected with 1 active"
                 else:
                     reportString = "2 Objects need to be selected"
@@ -1550,7 +1561,7 @@ class BACKUP_OBJECTS_PT_custom_panel1(bpy.types.Panel): #, PANEL_DEFAULTS):
         row = col.row(align=True)
         
         # row.label(text="Collection: "+ob_name_col_1, icon="GROUP")
-        row.label(text="To Collection: ", icon="GROUP")
+        row.label(text="Send To: ", icon="GROUP")
         row.label(text=ob_name_col_1)
         
         col.separator()
@@ -1694,6 +1705,9 @@ class BACKUP_OBJECTS_PT_backup_settings(bpy.types.Panel, PANEL_DEFAULTS):
         
         row = col.row(align=True)
         row.prop(scene.BO_Props, "only_active", expand=True)
+
+        row = col.row(align=True)
+        row.prop(scene.BO_Props, "include_bool_objects", expand=True)
         
         col.separator()
         
@@ -1848,9 +1862,13 @@ def ListOrderUpdate(self, context):
     
 class BACKUP_OBJECTS_preferences(bpy.types.AddonPreferences):
     # bl_idname = "iterate_objects_addon_b2_80_v1_0"
-    bl_idname = __name__
+    bl_idname = "backup_objects_addon_b2_80_v1_0_7"#__name__
     # here you define the addons customizable props
-    ui_tab: bpy.props.EnumProperty(name="Enum", items= [("GENERAL", "General", "General Options"), ("ABOUT", "About", "About Author & Where to Support")], description="Backup Object UI Tabs", default="GENERAL")
+    ui_tab: bpy.props.EnumProperty(name="Enum", items=
+        [("GENERAL", "General", "General Options"),
+        ("AUTHOR", "Author", "About Author & Where to Support"),
+        ("SUPPORT", "Support Addon", "Help fund development of the addon!")
+        ], description="Backup Object UI Tabs", default="GENERAL")
     
     def draw(self, context):
         layout = self.layout
@@ -1874,12 +1892,18 @@ class BACKUP_OBJECTS_preferences(bpy.types.AddonPreferences):
             
             row = col.row(align=True)
             
-        elif self.ui_tab == "ABOUT":
+        elif self.ui_tab == "AUTHOR":
             row = col.row(align=True)
             row.label(text="JohnGDDR5 on: ")
             row.operator("wm.url_open", text="Youtube").url = "https://www.youtube.com/channel/UCzPZvV24AXpOBEQWK4HWXIA"
             row.operator("wm.url_open", text="Twitter").url = "https://twitter.com/JohnGDDR5"
             row.operator("wm.url_open", text="Artstation").url = "https://www.artstation.com/johngddr5"
+
+        elif self.ui_tab == "SUPPORT":
+            row = col.row(align=True)
+            row.label(text="Purchase Addon On: ")
+            row.operator("wm.url_open", text="Blendermarket").url = "https://blendermarket.com/products/backup-object"
+            row.operator("wm.url_open", text="Gumroad").url = "https://gum.co/dNqyc"
 
 # Schema of Custom Property Classes
 """
@@ -1909,11 +1933,11 @@ class BACKUP_OBJECTS_collection_objects(bpy.types.PropertyGroup):
 class BACKUP_OBJECTS_props(bpy.types.PropertyGroup):
     # Tries to set collection_parent's default to Master Collection
     
-    master_collection: bpy.props.PointerProperty(name="Master Collection to add Collections for Object duplicates", type=bpy.types.Collection)
-    full_backups_collection: bpy.props.PointerProperty(name="Collection to add Full Backups duplicates", type=bpy.types.Collection)
+    master_collection: bpy.props.PointerProperty(name="Parent Collection where all Backup Collections and Objects are sent and organized", type=bpy.types.Collection)
+    full_backups_collection: bpy.props.PointerProperty(name="Collection where Full Backups are sent", type=bpy.types.Collection)
     # Booleans for locking default collection of parent
     
-    lock_active: bpy.props.BoolProperty(name="Lock Collection of Active", description="When locked, you can now edit the name of the selected collection", default=False)
+    lock_active: bpy.props.BoolProperty(name="Lock Parent Collection", description="Edit the name of parent collection", default=False)
     
     collections: bpy.props.CollectionProperty(type=BACKUP_OBJECTS_collection_objects)
     
@@ -1926,7 +1950,7 @@ class BACKUP_OBJECTS_props(bpy.types.PropertyGroup):
     
     # group_name_use: bpy.props.BoolProperty(name="Use Object Name for New Collection", description="Use the Object\'s name for the New Collection when creating a new Iteration Object", default=True)
     
-    new_collection_name: bpy.props.StringProperty(name="New Collection Name", description="Name used when creating a new collection for Active Object", default="Group")
+    new_collection_name: bpy.props.StringProperty(name="New Collection Name", description="Name used when creating a new collection for Active Object", default="Backups")
     
     listDesc =  ["Displays List in order of how many duplicates each object has", "Displays List in the order they were created", "Displays List in order user specified"]
     listDesc2 =  ["List displays in Descending Order", "List displays in Ascending Order"]
@@ -1958,6 +1982,9 @@ class BACKUP_OBJECTS_props(bpy.types.PropertyGroup):
     # backup settings
     only_active: bpy.props.BoolProperty(name="Backup Only Active Object", description="Only the active object will be backed up", default=False)
     
+    include_bool_objects: bpy.props.BoolProperty(name="Inlcude Boolean Objects", description="Checks Modifiers to include boolean objects to backup", default=True)
+    
+
     exclude_armature: bpy.props.BoolProperty(name="Exclude Armature Backups", description="Selected Armatures won\'t be backed up when in Weight Paint mode. To prevent unnecessary backups of an Armature when weight painting an object.", default=True)
     
     # hide_types_last
