@@ -151,7 +151,10 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator, STRING_REPORT_FUNCTIONS):
                 # This is to not Backup Armatures when in Weight Paint Mode - TOP
                 previous_selected = bpy.context.selected_objects
                 previous_selected_unselected = [] # Objects that were selected but aren't for Backups
+                previous_unselected_selected = [] # Objects that weren't selected but were for Backups
+                
                 new_backup_count = 0 # For Report String
+                boolean_count = 0
 
                 # Checks if you don't want to Backup Armatures when Weight Painting an Object
                 if props.exclude_armature == True and previous_mode == "WEIGHT_PAINT" :
@@ -179,15 +182,12 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator, STRING_REPORT_FUNCTIONS):
                     previous_selected = [previous_active, ]
 
                 # New Code 2/25/2021 Added support for including Boolean Objects, for BoxCutter addon workflows.
-                if props.include_bool_objects == True :
-                    for i in previous_selected:
-                        if len(i.modifiers) > 0:
-                            for j in i.modifiers:
-                                if j.object is not None:
-                                    j.object.select_set(True)
+                # TOP
 
-                # If Bool Objects are selected, must reasign previous_selected
-                previous_selected = bpy.context.selected_objects
+                previous_selected = select_bool_objects(props, previous_selected)
+                if previous_selected[1] is not None: previous_unselected_selected.extend(previous_selected[1])
+                boolean_count = previous_selected[2] # Number of Booleans to Back Up
+                previous_selected = previous_selected[0] # Previous one was 2 lists, so just the 1st one
                 # BOTTOM
                 
                 # Duplicates selected objects in previous_selected
@@ -264,6 +264,9 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator, STRING_REPORT_FUNCTIONS):
                 # Reselects Previously Unselected Objects that weren't Backed up
                 for i in previous_selected_unselected:
                     i.select_set(True)
+                # Unselects Boolean Objects that weren't selected to be Backed up
+                for i in previous_unselected_selected:
+                    i.select_set(False)
                     
                 # selects previously active object
                 previous_active.select_set(True)
@@ -275,7 +278,8 @@ class BACKUP_OBJECTS_OT_duplicate(bpy.types.Operator, STRING_REPORT_FUNCTIONS):
                 def report_objects(some_list):
                     return "Objects" if some_list > 1 else "Object" """
                 report_new_objects = ". %s New %s" % (new_backup_count, self.report_objects(new_backup_count) ) if new_backup_count > 0 else ""
-                self.report({'INFO'}, "Backed %d %s%s" % (total_objects_backed, self.report_objects(total_objects_backed), report_new_objects ) )
+                report_boolean_count = ". %s Boolean" % (boolean_count) if boolean_count > 0 else ""
+                self.report({'INFO'}, "Backed %d %s%s%s" % (total_objects_backed, self.report_objects(total_objects_backed), report_new_objects, report_boolean_count ) )
             else:
                 reportString = "No Objects Selected. 0 Objects Duplicated"
                 
@@ -426,6 +430,33 @@ class BACKUP_OBJECTS_OT_duplicate_all(bpy.types.Operator, STRING_REPORT_FUNCTION
         
         return {'FINISHED'}
 
+def select_bool_objects(props, previous_selected):
+    ## Returns modified previous_selected, and list of objects to unselect after duplication
+    #props = scene.BO_Props
+    boolean_count = 0
+    previous_unselected_selected = []
+    # New Code 2/25/2021 Added support for including Boolean Objects, for BoxCutter addon workflows.
+    # TOP
+    if props.include_bool_objects == True :
+        for i in previous_selected:
+            if len(i.modifiers) > 0:
+                for j in i.modifiers:
+                    if j.name == 'Boolean': ## Only looks for Boolean modifiers
+                        j_ob = j.object
+                        if j_ob is not None:
+                            
+                            if j_ob.select_get() is False: ## If it wasn't selected when BackingUp
+                                previous_unselected_selected.append(j_ob)
+
+                            j_ob.select_set(True) # selects it for duplicating
+                            boolean_count += 1
+
+    # If Bool Objects are selected, must reasign previous_selected
+    previous_selected = bpy.context.selected_objects
+    # BOTTOM
+    
+    return [previous_selected, previous_unselected_selected, boolean_count]
+
 class BACKUP_OBJECTS_OT_full_backup(bpy.types.Operator, STRING_REPORT_FUNCTIONS):
     bl_idname = "backup_objects.full_backup_ops"
     bl_label = "Backs up all selected Backup Objects and sends them to a \"Full Backup\" Collection."
@@ -474,6 +505,17 @@ class BACKUP_OBJECTS_OT_full_backup(bpy.types.Operator, STRING_REPORT_FUNCTIONS)
         # This is to not Backup Armatures when in Weight Paint Mode - TOP
         previous_selected = list(bpy.context.selected_objects)
 
+        previous_unselected_selected = [] # Objects that weren't selected but were for Backups
+
+        # New Code 2/25/2021 Added support for including Boolean Objects, for BoxCutter addon workflows.
+        # TOP
+
+        previous_selected = select_bool_objects(props, previous_selected)
+        if previous_selected[1] is not None: previous_unselected_selected.extend(previous_selected[1])
+        boolean_count = previous_selected[2] # Number of Booleans to Back Up
+        previous_selected = previous_selected[0] # Previous one was 2 lists, so just the 1st one
+        # BOTTOM
+
         # If you only want existing Backup Objects to be Fully BackedUp
         if self.only_backups == True:
             if len(props.collections) > 0:
@@ -511,7 +553,10 @@ class BACKUP_OBJECTS_OT_full_backup(bpy.types.Operator, STRING_REPORT_FUNCTIONS)
             # Reselects Previously Unselected Objects that weren't Backed up
             for i in previous_selected:
                 i.select_set(True)
-                
+            # Unselects Boolean Objects that weren't selected to be Backed up
+            for i in previous_unselected_selected:
+                i.select_set(False)
+
             # selects previously active object
             previous_active.select_set(True)
             # Sets previously active object as active
@@ -519,7 +564,8 @@ class BACKUP_OBJECTS_OT_full_backup(bpy.types.Operator, STRING_REPORT_FUNCTIONS)
                 
             # String Report
             #report_objects = "Objects" if total_objects_backed > 1 else "Object"
-            reportString = "Backed %d/%d %s" % (total_objects_backed, len(previous_selected), self.report_objects(total_objects_backed) )
+            report_boolean_count = ". %s Boolean" % (boolean_count) if boolean_count > 0 else ""
+            reportString = "Backed %d/%d %s%s" % (total_objects_backed, len(previous_selected), self.report_objects(total_objects_backed), report_boolean_count )
         else:
             reportString = "No Backup Objects to Backup"
             
